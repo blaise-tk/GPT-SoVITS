@@ -192,7 +192,9 @@ class MultiHeadAttention(nn.Module):
 
         if self.window_size is not None:
             key_relative_embeddings = self._get_relative_embeddings(self.emb_rel_k, t_s)
-            rel_logits = self._matmul_with_relative_keys(query / math.sqrt(self.k_channels), key_relative_embeddings)
+            rel_logits = self._matmul_with_relative_keys(
+                query / math.sqrt(self.k_channels), key_relative_embeddings
+            )
             scores_local = self._relative_position_to_absolute_position(rel_logits)
             scores = scores + scores_local
 
@@ -205,10 +207,14 @@ class MultiHeadAttention(nn.Module):
 
         if self.window_size is not None:
             relative_weights = self._absolute_position_to_relative_position(p_attn)
-            value_relative_embeddings = self._get_relative_embeddings(self.emb_rel_v, t_s)
-            output = output + self._matmul_with_relative_values(relative_weights, value_relative_embeddings)
-        
-        output = (output.transpose(2, 3).contiguous().view(b, d, -1))
+            value_relative_embeddings = self._get_relative_embeddings(
+                self.emb_rel_v, t_s
+            )
+            output = output + self._matmul_with_relative_values(
+                relative_weights, value_relative_embeddings
+            )
+
+        output = output.transpose(2, 3).contiguous().view(b, d, -1)
         return output, p_attn
 
     def _matmul_with_relative_values(self, x, y):
@@ -232,10 +238,12 @@ class MultiHeadAttention(nn.Module):
     def _get_relative_embeddings(self, relative_embeddings, length):
         max_relative_position = 2 * self.window_size + 1
         # Pad first before slice to avoid using cond ops.
-        pad_l = torch.zeros((1), dtype = torch.int64) + length - (self.window_size + 1)
-        pad_s = torch.zeros((1), dtype = torch.int64) + (self.window_size + 1) - length
-        pad_length = torch.max(pad_l, other=torch.zeros((1), dtype = torch.int64))
-        slice_start_position = torch.max(pad_s, other=torch.zeros((1), dtype = torch.int64))
+        pad_l = torch.zeros((1), dtype=torch.int64) + length - (self.window_size + 1)
+        pad_s = torch.zeros((1), dtype=torch.int64) + (self.window_size + 1) - length
+        pad_length = torch.max(pad_l, other=torch.zeros((1), dtype=torch.int64))
+        slice_start_position = torch.max(
+            pad_s, other=torch.zeros((1), dtype=torch.int64)
+        )
 
         slice_end_position = slice_start_position + 2 * length - 1
         padded_relative_embeddings = F.pad(

@@ -6,6 +6,7 @@ from torch.nn.functional import (
     _in_projection_packed,
 )
 
+
 def multi_head_attention_forward_patched(
     query,
     key,
@@ -48,7 +49,13 @@ def multi_head_attention_forward_patched(
     head_dim = embed_dim // num_heads
 
     proj_qkv = linear(query, in_proj_weight, in_proj_bias)
-    proj_qkv = proj_qkv.unflatten(-1, (3, query.size(-1))).unsqueeze(0).transpose(0, -2).squeeze(-2).contiguous()
+    proj_qkv = (
+        proj_qkv.unflatten(-1, (3, query.size(-1)))
+        .unsqueeze(0)
+        .transpose(0, -2)
+        .squeeze(-2)
+        .contiguous()
+    )
     q, k, v = proj_qkv[0], proj_qkv[1], proj_qkv[2]
 
     if cache["first_infer"] == 1:
@@ -80,12 +87,8 @@ def multi_head_attention_forward_patched(
     q = q.view(num_heads, -1, head_dim).unsqueeze(0)
     k = k.view(num_heads, -1, head_dim).unsqueeze(0)
     v = v.view(num_heads, -1, head_dim).unsqueeze(0)
-    attn_output = scaled_dot_product_attention(
-        q, k, v, attn_mask, dropout_p, is_causal
-    )
-    attn_output = (
-        attn_output.permute(2, 0, 1, 3).contiguous().view(-1, embed_dim)
-    )
+    attn_output = scaled_dot_product_attention(q, k, v, attn_mask, dropout_p, is_causal)
+    attn_output = attn_output.permute(2, 0, 1, 3).contiguous().view(-1, embed_dim)
     attn_output = linear(attn_output, out_proj_weight, out_proj_bias)
     attn_output = attn_output.view(-1, 1, attn_output.size(1))
 

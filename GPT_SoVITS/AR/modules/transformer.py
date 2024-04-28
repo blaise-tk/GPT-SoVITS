@@ -121,6 +121,7 @@ class TransformerEncoder(nn.Module):
         >>> src = torch.rand(10, 32, 512)
         >>> out = transformer_encoder(src)
     """
+
     __constants__ = ["norm"]
 
     def __init__(self, encoder_layer, num_layers, norm=None):

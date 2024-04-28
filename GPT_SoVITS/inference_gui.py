@@ -1,13 +1,32 @@
 import sys
 from PyQt5.QtCore import QEvent
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QTextEdit
-from PyQt5.QtWidgets import QGridLayout, QVBoxLayout, QWidget, QFileDialog, QStatusBar, QComboBox
+from PyQt5.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QTextEdit,
+)
+from PyQt5.QtWidgets import (
+    QGridLayout,
+    QVBoxLayout,
+    QWidget,
+    QFileDialog,
+    QStatusBar,
+    QComboBox,
+)
 import soundfile as sf
 
 from tools.i18n.i18n import I18nAuto
+
 i18n = I18nAuto()
 
-from GPT_SoVITS.inference_webui import change_gpt_weights, change_sovits_weights, get_tts_wav
+from GPT_SoVITS.inference_webui import (
+    change_gpt_weights,
+    change_sovits_weights,
+    get_tts_wav,
+)
 
 
 class GPTSoVITSGUI(QMainWindow):
@@ -17,10 +36,11 @@ class GPTSoVITSGUI(QMainWindow):
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle('GPT-SoVITS GUI')
+        self.setWindowTitle("GPT-SoVITS GUI")
         self.setGeometry(800, 450, 950, 850)
 
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             QWidget {
                 background-color: #a3d3b1; 
             }
@@ -60,11 +80,13 @@ class GPTSoVITSGUI(QMainWindow):
                 border: 1px solid #45a049;
                 box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.1);
             }
-        """)    
+        """
+        )
 
         license_text = (
-        "本软件以MIT协议开源, 作者不对软件具备任何控制力, 使用软件者、传播软件导出的声音者自负全责. "
-        "如不认可该条款, 则不能使用或引用软件包内任何代码和文件. 详见根目录LICENSE.")
+            "本软件以MIT协议开源, 作者不对软件具备任何控制力, 使用软件者、传播软件导出的声音者自负全责. "
+            "如不认可该条款, 则不能使用或引用软件包内任何代码和文件. 详见根目录LICENSE."
+        )
         license_label = QLabel(license_text)
         license_label.setWordWrap(True)
 
@@ -121,14 +143,16 @@ class GPTSoVITSGUI(QMainWindow):
         self.output_text = QTextEdit()
         self.output_text.setReadOnly(True)
 
-        self.add_drag_drop_events([
-            self.GPT_model_input,
-            self.SoVITS_model_input,
-            self.ref_audio_input,
-            self.ref_text_input,
-            self.target_text_input,
-            self.output_input,
-        ])
+        self.add_drag_drop_events(
+            [
+                self.GPT_model_input,
+                self.SoVITS_model_input,
+                self.ref_audio_input,
+                self.ref_text_input,
+                self.target_text_input,
+                self.output_input,
+            ]
+        )
 
         self.synthesize_button = QPushButton("合成")
         self.synthesize_button.clicked.connect(self.synthesize)
@@ -141,7 +165,7 @@ class GPTSoVITSGUI(QMainWindow):
         main_layout = QVBoxLayout()
 
         input_layout = QGridLayout()
-        input_layout.setSpacing(10) 
+        input_layout.setSpacing(10)
 
         self.setLayout(input_layout)
 
@@ -170,11 +194,11 @@ class GPTSoVITSGUI(QMainWindow):
         input_layout.addWidget(self.target_text_label, 13, 0)
         input_layout.addWidget(self.target_text_input, 14, 0, 1, 2)
         input_layout.addWidget(self.target_text_button, 14, 2)
-        
+
         input_layout.addWidget(self.output_label, 15, 0)
         input_layout.addWidget(self.output_input, 16, 0, 1, 2)
         input_layout.addWidget(self.output_button, 16, 2)
-        
+
         main_layout.addLayout(input_layout)
 
         output_layout = QVBoxLayout()
@@ -198,7 +222,7 @@ class GPTSoVITSGUI(QMainWindow):
     def dropEvent(self, event):
         if event.mimeData().hasUrls():
             file_paths = [url.toLocalFile() for url in event.mimeData().urls()]
-          
+
             if len(file_paths) == 1:
                 self.update_ref_audio(file_paths[0])
                 self.update_input_paths(self.ref_audio_input, file_paths[0])
@@ -215,7 +239,7 @@ class GPTSoVITSGUI(QMainWindow):
             mime_data = event.mimeData()
             if mime_data.hasUrls():
                 event.acceptProposedAction()
-              
+
         elif event.type() == QEvent.Drop:
             mime_data = event.mimeData()
             if mime_data.hasUrls():
@@ -227,14 +251,18 @@ class GPTSoVITSGUI(QMainWindow):
                 event.acceptProposedAction()
 
         return super().eventFilter(obj, event)
-    
+
     def select_GPT_model(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "选择GPT模型文件", "", "GPT Files (*.ckpt)")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "选择GPT模型文件", "", "GPT Files (*.ckpt)"
+        )
         if file_path:
             self.GPT_model_input.setText(file_path)
 
     def select_SoVITS_model(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "选择SoVITS模型文件", "", "SoVITS Files (*.pth)")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "选择SoVITS模型文件", "", "SoVITS Files (*.pth)"
+        )
         if file_path:
             self.SoVITS_model_input.setText(file_path)
 
@@ -251,7 +279,7 @@ class GPTSoVITSGUI(QMainWindow):
 
         if file_dialog.exec_():
             file_paths = file_dialog.selectedFiles()
-          
+
             if len(file_paths) == 1:
                 self.update_ref_audio(file_paths[0])
                 self.update_input_paths(self.ref_audio_input, file_paths[0])
@@ -259,17 +287,21 @@ class GPTSoVITSGUI(QMainWindow):
                 self.update_ref_audio(", ".join(file_paths))
 
     def upload_ref_text(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "选择文本文件", "", "Text Files (*.txt)")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "选择文本文件", "", "Text Files (*.txt)"
+        )
         if file_path:
-            with open(file_path, 'r', encoding='utf-8') as file:
+            with open(file_path, "r", encoding="utf-8") as file:
                 content = file.read()
                 self.ref_text_input.setText(content)
                 self.update_input_paths(self.ref_text_input, file_path)
 
     def upload_target_text(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "选择文本文件", "", "Text Files (*.txt)")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "选择文本文件", "", "Text Files (*.txt)"
+        )
         if file_path:
-            with open(file_path, 'r', encoding='utf-8') as file:
+            with open(file_path, "r", encoding="utf-8") as file:
                 content = file.read()
                 self.target_text_input.setText(content)
                 self.update_input_paths(self.target_text_input, file_path)
@@ -311,23 +343,26 @@ class GPTSoVITSGUI(QMainWindow):
         change_gpt_weights(gpt_path=GPT_model_path)
         change_sovits_weights(sovits_path=SoVITS_model_path)
 
-        synthesis_result = get_tts_wav(ref_wav_path=ref_audio_path, 
-                                       prompt_text=ref_text, 
-                                       prompt_language=language_combobox, 
-                                       text=target_text, 
-                                       text_language=language_combobox_02)
-        
+        synthesis_result = get_tts_wav(
+            ref_wav_path=ref_audio_path,
+            prompt_text=ref_text,
+            prompt_language=language_combobox,
+            text=target_text,
+            text_language=language_combobox_02,
+        )
+
         result_list = list(synthesis_result)
 
         if result_list:
             last_sampling_rate, last_audio_data = result_list[-1]
-            output_wav_path = os.path.join(output_path, "output.wav") 
+            output_wav_path = os.path.join(output_path, "output.wav")
             sf.write(output_wav_path, last_audio_data, last_sampling_rate)
 
             result = "Audio saved to " + output_wav_path
 
         self.status_bar.showMessage("合成完成！输出路径：" + output_wav_path, 5000)
         self.output_text.append("处理结果：\n" + result)
+
 
 def main():
     app = QApplication(sys.argv)
@@ -336,5 +371,5 @@ def main():
     sys.exit(app.exec_())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

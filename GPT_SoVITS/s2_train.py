@@ -37,7 +37,9 @@ torch.backends.cudnn.deterministic = False
 ###反正A100fp32更快，那试试tf32吧
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
-torch.set_float32_matmul_precision("medium")  # 最低精度但最快（也就快一丁点），对于结果造成不了影响
+torch.set_float32_matmul_precision(
+    "medium"
+)  # 最低精度但最快（也就快一丁点），对于结果造成不了影响
 # from config import pretrained_s2G,pretrained_s2D
 global_step = 0
 
@@ -73,7 +75,7 @@ def run(rank, n_gpus, hps):
         writer_eval = SummaryWriter(log_dir=os.path.join(hps.s2_ckpt_dir, "eval"))
 
     dist.init_process_group(
-        backend = "gloo" if os.name == "nt" or not torch.cuda.is_available() else "nccl",
+        backend="gloo" if os.name == "nt" or not torch.cuda.is_available() else "nccl",
         init_method="env://",
         world_size=n_gpus,
         rank=rank,
@@ -127,19 +129,27 @@ def run(rank, n_gpus, hps):
     #                              batch_size=1, pin_memory=True,
     #                              drop_last=False, collate_fn=collate_fn)
 
-    net_g = SynthesizerTrn(
-        hps.data.filter_length // 2 + 1,
-        hps.train.segment_size // hps.data.hop_length,
-        n_speakers=hps.data.n_speakers,
-        **hps.model,
-    ).cuda(rank) if torch.cuda.is_available() else SynthesizerTrn(
-        hps.data.filter_length // 2 + 1,
-        hps.train.segment_size // hps.data.hop_length,
-        n_speakers=hps.data.n_speakers,
-        **hps.model,
-    ).to(device)
+    net_g = (
+        SynthesizerTrn(
+            hps.data.filter_length // 2 + 1,
+            hps.train.segment_size // hps.data.hop_length,
+            n_speakers=hps.data.n_speakers,
+            **hps.model,
+        ).cuda(rank)
+        if torch.cuda.is_available()
+        else SynthesizerTrn(
+            hps.data.filter_length // 2 + 1,
+            hps.train.segment_size // hps.data.hop_length,
+            n_speakers=hps.data.n_speakers,
+            **hps.model,
+        ).to(device)
+    )
 
-    net_d = MultiPeriodDiscriminator(hps.model.use_spectral_norm).cuda(rank) if torch.cuda.is_available() else MultiPeriodDiscriminator(hps.model.use_spectral_norm).to(device)
+    net_d = (
+        MultiPeriodDiscriminator(hps.model.use_spectral_norm).cuda(rank)
+        if torch.cuda.is_available()
+        else MultiPeriodDiscriminator(hps.model.use_spectral_norm).to(device)
+    )
     for name, param in net_g.named_parameters():
         if not param.requires_grad:
             print(name, "not requires_grad")
@@ -218,7 +228,9 @@ def run(rank, n_gpus, hps):
                 net_g.module.load_state_dict(
                     torch.load(hps.train.pretrained_s2G, map_location="cpu")["weight"],
                     strict=False,
-                ) if torch.cuda.is_available() else net_g.load_state_dict(
+                )
+                if torch.cuda.is_available()
+                else net_g.load_state_dict(
                     torch.load(hps.train.pretrained_s2G, map_location="cpu")["weight"],
                     strict=False,
                 )
@@ -229,7 +241,9 @@ def run(rank, n_gpus, hps):
             print(
                 net_d.module.load_state_dict(
                     torch.load(hps.train.pretrained_s2D, map_location="cpu")["weight"]
-                ) if torch.cuda.is_available() else net_d.load_state_dict(
+                )
+                if torch.cuda.is_available()
+                else net_d.load_state_dict(
                     torch.load(hps.train.pretrained_s2D, map_location="cpu")["weight"]
                 )
             )
@@ -537,10 +551,14 @@ def evaluate(hps, generator, eval_loader, writer_eval):
                 ssl = ssl.to(device)
                 text, text_lengths = text.to(device), text_lengths.to(device)
             for test in [0, 1]:
-                y_hat, mask, *_ = generator.module.infer(
-                    ssl, spec, spec_lengths, text, text_lengths, test=test
-                ) if torch.cuda.is_available() else generator.infer(
-                    ssl, spec, spec_lengths, text, text_lengths, test=test
+                y_hat, mask, *_ = (
+                    generator.module.infer(
+                        ssl, spec, spec_lengths, text, text_lengths, test=test
+                    )
+                    if torch.cuda.is_available()
+                    else generator.infer(
+                        ssl, spec, spec_lengths, text, text_lengths, test=test
+                    )
                 )
                 y_hat_lengths = mask.sum([1, 2]).long() * hps.data.hop_length
 
