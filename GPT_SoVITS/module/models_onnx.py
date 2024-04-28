@@ -223,7 +223,7 @@ class TextEncoder(nn.Module):
         self.proj = nn.Conv1d(hidden_channels, out_channels * 2, 1)
 
     def forward(self, y, text, ge):
-        y_mask = torch.ones_like(y[:1,:1,:])
+        y_mask = torch.ones_like(y[:1, :1, :])
 
         y = self.ssl_proj(y * y_mask) * y_mask
         y = self.encoder_ssl(y * y_mask, y_mask)
@@ -893,7 +893,7 @@ class SynthesizerTrn(nn.Module):
             # self.enc_p.mrte.requires_grad_(False)
 
     def forward(self, codes, text, refer):
-        refer_mask = torch.ones_like(refer[:1,:1,:])
+        refer_mask = torch.ones_like(refer[:1, :1, :])
         ge = self.ref_enc(refer * refer_mask, refer_mask)
 
         quantized = self.quantizer.decode(codes)
@@ -901,10 +901,8 @@ class SynthesizerTrn(nn.Module):
             dquantized = torch.cat([quantized, quantized]).permute(1, 2, 0)
             quantized = dquantized.contiguous().view(1, self.ssl_dim, -1)
 
-        x, m_p, logs_p, y_mask = self.enc_p(
-            quantized, text, ge
-        )
-        
+        x, m_p, logs_p, y_mask = self.enc_p(quantized, text, ge)
+
         z_p = m_p + torch.randn_like(m_p) * torch.exp(logs_p)
 
         z = self.flow(z_p, y_mask, g=ge, reverse=True)

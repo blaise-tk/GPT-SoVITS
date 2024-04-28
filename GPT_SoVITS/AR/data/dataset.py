@@ -125,7 +125,7 @@ class Text2SemanticDataset(Dataset):
         for i in range(semantic_data_len):
             # 先依次遍历
             # get str
-            item_name = self.semantic_data.iloc[i,0]
+            item_name = self.semantic_data.iloc[i, 0]
             # print(self.phoneme_data)
             try:
                 phoneme, word2ph, text = self.phoneme_data[item_name]
@@ -135,7 +135,7 @@ class Text2SemanticDataset(Dataset):
                 num_not_in += 1
                 continue
 
-            semantic_str = self.semantic_data.iloc[i,1]
+            semantic_str = self.semantic_data.iloc[i, 1]
             # get token list
             semantic_ids = [int(idx) for idx in semantic_str.split(" ")]
             # (T), 是否需要变成 (1, T) -> 不需要，因为需要求 len

@@ -26,12 +26,14 @@ from AR.utils import get_newest_ckpt
 from collections import OrderedDict
 from time import time as ttime
 import shutil
-def my_save(fea,path):#####fix issue: torch.save doesn't support chinese path
-    dir=os.path.dirname(path)
-    name=os.path.basename(path)
-    tmp_path="%s.pth"%(ttime())
-    torch.save(fea,tmp_path)
-    shutil.move(tmp_path,"%s/%s"%(dir,name))
+
+
+def my_save(fea, path):  #####fix issue: torch.save doesn't support chinese path
+    dir = os.path.dirname(path)
+    name = os.path.basename(path)
+    tmp_path = "%s.pth" % (ttime())
+    torch.save(fea, tmp_path)
+    shutil.move(tmp_path, "%s/%s" % (dir, name))
 
 
 class my_model_ckpt(ModelCheckpoint):
@@ -115,7 +117,7 @@ def main(args):
         dirpath=ckpt_dir,
     )
     logger = TensorBoardLogger(name=output_dir.stem, save_dir=output_dir)
-    os.environ["MASTER_ADDR"]="localhost"
+    os.environ["MASTER_ADDR"] = "localhost"
     trainer: Trainer = Trainer(
         max_epochs=config["train"]["epochs"],
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
@@ -125,9 +127,15 @@ def main(args):
         devices=-1 if torch.cuda.is_available() else 1,
         benchmark=False,
         fast_dev_run=False,
-        strategy = DDPStrategy(
-            process_group_backend="nccl" if platform.system() != "Windows" else "gloo"
-        ) if torch.cuda.is_available() else "auto",
+        strategy=(
+            DDPStrategy(
+                process_group_backend=(
+                    "nccl" if platform.system() != "Windows" else "gloo"
+                )
+            )
+            if torch.cuda.is_available()
+            else "auto"
+        ),
         precision=config["train"]["precision"],
         logger=logger,
         num_sanity_val_steps=0,
