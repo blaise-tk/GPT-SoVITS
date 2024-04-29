@@ -5,8 +5,10 @@ from transformers import (
     Wav2Vec2FeatureExtractor,
     HubertModel,
 )
+
 logging.getLogger("numba").setLevel(logging.WARNING)
 cnhubert_base_path = None
+
 
 class CNHubert(nn.Module):
     def __init__(self):
@@ -34,4 +36,3 @@ def get_content(hmodel, wav_16k_tensor):
     with torch.no_grad():
         feats = hmodel(wav_16k_tensor)
     return feats.transpose(1, 2)
-

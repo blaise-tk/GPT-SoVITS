@@ -1,6 +1,3 @@
-
-
-
 import json
 import yaml
 import warnings
@@ -236,8 +233,6 @@ def change_label(if_label, path_list):
         kill_process(p_label.pid)
         p_label = None
         yield i18n("打标工具WebUI已关闭")
-
-
 
 
 def change_tts_inference(
@@ -1018,17 +1013,11 @@ def close1abc():
     )
 
 
-with gr.Blocks(title="GPT-SoVITS WebUI", theme='remilia/Ghostly') as app:
-    gr.Markdown(
-        value=i18n(
-            "GPT-SoVITS WebUI"
-        )
-    )
+with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
+    gr.Markdown(value=i18n("GPT-SoVITS WebUI"))
 
     with gr.Tabs():
-        with gr.TabItem(
-            i18n("0-前置数据集获取工具")
-        ): 
+        with gr.TabItem(i18n("0-前置数据集获取工具")):
             gr.Markdown(value=i18n("Speech Slicing Tool"))
             with gr.Row():
                 with gr.Row():
