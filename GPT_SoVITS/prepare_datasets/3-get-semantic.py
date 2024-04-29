@@ -1,4 +1,10 @@
 import os
+import sys
+import traceback
+import logging
+import utils
+import torch
+from module.models import SynthesizerTrn
 
 inp_text = os.environ.get("inp_text")
 exp_name = os.environ.get("exp_name")
@@ -9,29 +15,13 @@ opt_dir = os.environ.get("opt_dir")
 pretrained_s2G = os.environ.get("pretrained_s2G")
 s2config_path = os.environ.get("s2config_path")
 is_half = eval(os.environ.get("is_half", "True"))
-import math, traceback
-import multiprocessing
-import sys, pdb
+
 
 now_dir = os.getcwd()
 sys.path.append(now_dir)
-from random import shuffle
-import torch.multiprocessing as mp
-from glob import glob
-from tqdm import tqdm
-import logging, librosa, utils, torch
-from module.models import SynthesizerTrn
+
 
 logging.getLogger("numba").setLevel(logging.WARNING)
-# from config import pretrained_s2G
-
-# inp_text=sys.argv[1]
-# exp_name=sys.argv[2]
-# i_part=sys.argv[3]
-# all_parts=sys.argv[4]
-# os.environ["CUDA_VISIBLE_DEVICES"]=sys.argv[5]
-# opt_dir="/data/docker/liujing04/gpt-vits/fine_tune_dataset/%s"%exp_name
-
 
 hubert_dir = "%s/4-cnhubert" % (opt_dir)
 semantic_path = "%s/6-name2semantic-%s.tsv" % (opt_dir, i_part)

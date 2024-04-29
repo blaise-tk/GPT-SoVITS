@@ -293,29 +293,3 @@ class Text2SemanticDataset(Dataset):
             # torch.Tensor (B, 1024, max_phoneme_length)
             "bert_feature": bert_padded,
         }
-
-
-if __name__ == "__main__":
-    root_dir = "/data/docker/liujing04/gpt-vits/prepare/dump_mix/"
-    dataset = Text2SemanticDataset(
-        phoneme_path=root_dir + "phoneme_train.npy",
-        semantic_path=root_dir + "semantic_train.tsv",
-    )
-
-    batch_size = 12
-    dataloader = DataLoader(
-        dataset, batch_size=batch_size, collate_fn=dataset.collate, shuffle=False
-    )
-    for i, batch in enumerate(dataloader):
-        if i % 1000 == 0:
-            print(i)
-        # if i == 0:
-        #     print('batch["ids"]:', batch["ids"])
-        # print('batch["phoneme_ids"]:', batch["phoneme_ids"],
-        #       batch["phoneme_ids"].shape)
-        # print('batch["phoneme_ids_len"]:', batch["phoneme_ids_len"],
-        #       batch["phoneme_ids_len"].shape)
-        # print('batch["semantic_ids"]:', batch["semantic_ids"],
-        #       batch["semantic_ids"].shape)
-        # print('batch["semantic_ids_len"]:', batch["semantic_ids_len"],
-        #       batch["semantic_ids_len"].shape)

@@ -1,12 +1,20 @@
-import os, shutil, sys, pdb, re
 
-now_dir = os.getcwd()
-sys.path.insert(0, now_dir)
-import json, yaml, warnings, torch
+
+
+import json
+import yaml
+import warnings
+import torch
+import os
+import re
+import shutil
+import sys
 import platform
 import psutil
 import signal
 
+now_dir = os.getcwd()
+sys.path.insert(0, now_dir)
 warnings.filterwarnings("ignore")
 torch.manual_seed(233333)
 tmp = os.path.join(now_dir, "TEMP")
@@ -177,7 +185,6 @@ def change_choices():
 
 
 p_label = None
-p_uvr5 = None
 p_asr = None
 p_denoise = None
 p_tts_inference = None
@@ -231,23 +238,6 @@ def change_label(if_label, path_list):
         yield i18n("打标工具WebUI已关闭")
 
 
-def change_uvr5(if_uvr5):
-    global p_uvr5
-    if if_uvr5 == True and p_uvr5 == None:
-        cmd = '"%s" tools/uvr5/webui.py "%s" %s %s %s' % (
-            python_exec,
-            infer_device,
-            is_half,
-            webui_port_uvr5,
-            is_share,
-        )
-        yield i18n("UVR5已开启")
-        print(cmd)
-        p_uvr5 = Popen(cmd, shell=True)
-    elif if_uvr5 == False and p_uvr5 != None:
-        kill_process(p_uvr5.pid)
-        p_uvr5 = None
-        yield i18n("UVR5已关闭")
 
 
 def change_tts_inference(
@@ -1028,27 +1018,18 @@ def close1abc():
     )
 
 
-with gr.Blocks(title="GPT-SoVITS WebUI") as app:
+with gr.Blocks(title="GPT-SoVITS WebUI", theme='remilia/Ghostly') as app:
     gr.Markdown(
         value=i18n(
-            "本软件以MIT协议开源, 作者不对软件具备任何控制力, 使用软件者、传播软件导出的声音者自负全责. <br>如不认可该条款, 则不能使用或引用软件包内任何代码和文件. 详见根目录<b>LICENSE</b>."
-        )
-    )
-    gr.Markdown(
-        value=i18n(
-            "中文教程文档：https://www.yuque.com/baicaigongchang1145haoyuangong/ib3g1e"
+            "GPT-SoVITS WebUI"
         )
     )
 
     with gr.Tabs():
         with gr.TabItem(
             i18n("0-前置数据集获取工具")
-        ):  # 提前随机切片防止uvr5爆内存->uvr5->slicer->asr->打标
-            gr.Markdown(value=i18n("0a-UVR5人声伴奏分离&去混响去延迟工具"))
-            with gr.Row():
-                if_uvr5 = gr.Checkbox(label=i18n("是否开启UVR5-WebUI"), show_label=True)
-                uvr5_info = gr.Textbox(label=i18n("UVR5进程输出信息"))
-            gr.Markdown(value=i18n("0b-语音切分工具"))
+        ): 
+            gr.Markdown(value=i18n("Speech Slicing Tool"))
             with gr.Row():
                 with gr.Row():
                     slice_inp_path = gr.Textbox(
@@ -1112,7 +1093,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI") as app:
                         interactive=True,
                     )
                     slicer_info = gr.Textbox(label=i18n("语音切割进程输出信息"))
-            gr.Markdown(value=i18n("0bb-语音降噪工具"))
+            gr.Markdown(value=i18n("Speech Noise Reduction Tool"))
             with gr.Row():
                 open_denoise_button = gr.Button(
                     i18n("开启语音降噪"), variant="primary", visible=True
@@ -1194,7 +1175,6 @@ with gr.Blocks(title="GPT-SoVITS WebUI") as app:
                 )
                 label_info = gr.Textbox(label=i18n("打标工具进程输出信息"))
             if_label.change(change_label, [if_label, path_list], [label_info])
-            if_uvr5.change(change_uvr5, [if_uvr5], [uvr5_info])
             open_asr_button.click(
                 open_asr,
                 [asr_inp_dir, asr_opt_dir, asr_model, asr_size, asr_lang],

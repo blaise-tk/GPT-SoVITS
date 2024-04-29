@@ -14,7 +14,6 @@ cn2an
 pypinyin
 pyopenjtalk
 g2p_en
-torchaudio
 modelscope==1.10.0
 sentencepiece
 transformers
@@ -26,3 +25,5 @@ jieba
 LangSegment>=0.2.0
 Faster_Whisper
 wordsegment
+torch==2.0.0
+torchaudio==2.0.1
