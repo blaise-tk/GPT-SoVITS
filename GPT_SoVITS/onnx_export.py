@@ -436,17 +436,3 @@ def export(vits_path, gpt_path, project_name):
     MoeVSConfJson = json.dumps(MoeVSConf)
     with open(f"onnx/{project_name}.json", "w") as MoeVsConfFile:
         json.dump(MoeVSConf, MoeVsConfFile, indent=4)
-
-
-if __name__ == "__main__":
-    try:
-        os.mkdir("onnx")
-    except:
-        pass
-
-    gpt_path = "GPT_weights/nahida-e25.ckpt"
-    vits_path = "SoVITS_weights/nahida_e30_s3930.pth"
-    exp_path = "nahida"
-    export(vits_path, gpt_path, exp_path)
-
-    # soundfile.write("out.wav", a, vits.hps.data.sampling_rate)

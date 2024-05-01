@@ -7,7 +7,7 @@ logs
 reference
 GPT_weights
 SoVITS_weights
-TEMP
+temp
 
 env
 .env

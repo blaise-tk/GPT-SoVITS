@@ -520,7 +520,7 @@ def train_and_evaluate(
             )
 
     if rank == 0:
-        logger.info("====> Epoch: {}".format(epoch))
+        logger.info("Epoch: {}".format(epoch))
 
 
 def evaluate(hps, generator, eval_loader, writer_eval):

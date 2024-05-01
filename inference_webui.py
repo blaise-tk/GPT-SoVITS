@@ -1,12 +1,3 @@
-"""
-按中英混合识别
-按日英混合识别
-多语种启动切分识别语种
-全部按中文识别
-全部按英文识别
-全部按日文识别
-"""
-
 import os, re, logging
 import LangSegment
 
@@ -20,8 +11,8 @@ logging.getLogger("torchaudio._extension").setLevel(logging.ERROR)
 import pdb
 import torch
 
-if os.path.exists("./gweight.txt"):
-    with open("./gweight.txt", "r", encoding="utf-8") as file:
+if os.path.exists("./logs/gweight.txt"):
+    with open("./logs/gweight.txt", "r", encoding="utf-8") as file:
         gweight_data = file.read()
         gpt_path = os.environ.get("gpt_path", gweight_data)
 else:
@@ -30,18 +21,15 @@ else:
         "GPT_SoVITS/pretrained_models/s1bert25hz-2kh-longer-epoch=68e-step=50232.ckpt",
     )
 
-if os.path.exists("./sweight.txt"):
-    with open("./sweight.txt", "r", encoding="utf-8") as file:
+if os.path.exists("./logs/sweight.txt"):
+    with open("./logs/sweight.txt", "r", encoding="utf-8") as file:
         sweight_data = file.read()
         sovits_path = os.environ.get("sovits_path", sweight_data)
 else:
     sovits_path = os.environ.get(
         "sovits_path", "GPT_SoVITS/pretrained_models/s2G488k.pth"
     )
-# gpt_path = os.environ.get(
-#     "gpt_path", "pretrained_models/s1bert25hz-2kh-longer-epoch=68e-step=50232.ckpt"
-# )
-# sovits_path = os.environ.get("sovits_path", "pretrained_models/s2G488k.pth")
+
 cnhubert_base_path = os.environ.get(
     "cnhubert_base_path", "GPT_SoVITS/pretrained_models/chinese-hubert-base"
 )
@@ -73,8 +61,6 @@ from my_utils import load_audio
 from tools.i18n.i18n import I18nAuto
 
 i18n = I18nAuto()
-
-# os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'  # 确保直接启动推理UI时也能够设置。
 
 if torch.cuda.is_available():
     device = "cuda"
@@ -160,7 +146,7 @@ def change_sovits_weights(sovits_path):
         vq_model = vq_model.to(device)
     vq_model.eval()
     print(vq_model.load_state_dict(dict_s2["weight"], strict=False))
-    with open("./sweight.txt", "w", encoding="utf-8") as f:
+    with open("./logs/sweight.txt", "w", encoding="utf-8") as f:
         f.write(sovits_path)
 
 
@@ -181,7 +167,7 @@ def change_gpt_weights(gpt_path):
     t2s_model.eval()
     total = sum([param.nelement() for param in t2s_model.parameters()])
     print("Number of parameter: %.2fM" % (total / 1e6))
-    with open("./gweight.txt", "w", encoding="utf-8") as f:
+    with open("./logs/gweight.txt", "w", encoding="utf-8") as f:
         f.write(gpt_path)
 
 
@@ -576,8 +562,8 @@ pretrained_sovits_name = "GPT_SoVITS/pretrained_models/s2G488k.pth"
 pretrained_gpt_name = (
     "GPT_SoVITS/pretrained_models/s1bert25hz-2kh-longer-epoch=68e-step=50232.ckpt"
 )
-SoVITS_weight_root = "SoVITS_weights"
-GPT_weight_root = "GPT_weights"
+SoVITS_weight_root = "logs/weights/SoVITS"
+GPT_weight_root = "logs/weights/GPT"
 os.makedirs(SoVITS_weight_root, exist_ok=True)
 os.makedirs(GPT_weight_root, exist_ok=True)
 
@@ -660,7 +646,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI") as app:
                 label=i18n("需要合成的语种"),
                 choices=[
                     i18n("中文"),
-                    i18n("英文"),
+                    i18n("English"),
                     i18n("日文"),
                     i18n("中英混合"),
                     i18n("日英混合"),
@@ -707,8 +693,8 @@ with gr.Blocks(title="GPT-SoVITS WebUI") as app:
                     value=1,
                     interactive=True,
                 )
-            inference_button = gr.Button(i18n("合成语音"), variant="primary")
-            output = gr.Audio(label=i18n("输出的语音"))
+            inference_button = gr.Button(i18n("Synthesized speech"), variant="primary")
+            output = gr.Audio(label=i18n("Output speech"))
 
         inference_button.click(
             get_tts_wav,
@@ -729,23 +715,31 @@ with gr.Blocks(title="GPT-SoVITS WebUI") as app:
 
         gr.Markdown(
             value=i18n(
-                "文本切分工具。太长的文本合成出来效果不一定好，所以太长建议先切。合成会根据文本的换行分开合成再拼起来。"
+                "Text cutting tool. Too long text synthesized out of the effect is not necessarily good, so too long recommended first cut. Synthesis will be based on the text of the line breaks separate synthesis and then put together."
             )
         )
         with gr.Row():
-            text_inp = gr.Textbox(label=i18n("需要合成的切分前文本"), value="")
-            button1 = gr.Button(i18n("凑四句一切"), variant="primary")
-            button2 = gr.Button(i18n("凑50字一切"), variant="primary")
-            button3 = gr.Button(i18n("按中文句号。切"), variant="primary")
-            button4 = gr.Button(i18n("按英文句号.切"), variant="primary")
-            button5 = gr.Button(i18n("按标点符号切"), variant="primary")
-            text_opt = gr.Textbox(label=i18n("切分后文本"), value="")
+            text_inp = gr.Textbox(
+                label=i18n("Pre-slice text to be synthesized"), value=""
+            )
+            button1 = gr.Button(
+                i18n("Compose four lines, everything"), variant="primary"
+            )
+            button2 = gr.Button(i18n("Everything in 50 words."), variant="primary")
+            button3 = gr.Button(i18n("Cut by Chinese periods"), variant="primary")
+            button4 = gr.Button(i18n("Cut by periods"), variant="primary")
+            button5 = gr.Button(i18n("Punctuation marks"), variant="primary")
+            text_opt = gr.Textbox(label=i18n("Truncated text"), value="")
             button1.click(cut1, [text_inp], [text_opt])
             button2.click(cut2, [text_inp], [text_opt])
             button3.click(cut3, [text_inp], [text_opt])
             button4.click(cut4, [text_inp], [text_opt])
             button5.click(cut5, [text_inp], [text_opt])
-        gr.Markdown(value=i18n("后续将支持转音素、手工修改音素、语音合成分步执行。"))
+        gr.Markdown(
+            value=i18n(
+                "Subsequently, it will support transcription of phonemes, manual modification of phonemes, and step-by-step execution of speech synthesis."
+            )
+        )
 
 app.queue(concurrency_count=511, max_size=1022).launch(
     server_name="0.0.0.0",
