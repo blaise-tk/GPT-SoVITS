@@ -5,7 +5,7 @@ from scipy.io import wavfile
 # parent_directory = os.path.dirname(os.path.abspath(__file__))
 # sys.path.append(parent_directory)
 from my_utils import load_audio
-from slicer2 import Slicer
+from slicer import Slicer
 
 
 def slice(
@@ -60,8 +60,7 @@ def slice(
                     (chunk * 32767).astype(np.int16),
                 )
         except:
-            print(inp_path, "->fail->", traceback.format_exc())
-    return "执行完毕，请检查输出文件"
+            print(inp_path, "fail ->", traceback.format_exc())
 
 
 print(slice(*sys.argv[1:]))
