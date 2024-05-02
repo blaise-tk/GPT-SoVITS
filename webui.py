@@ -1,31 +1,49 @@
-import json
-import yaml
-import warnings
-import torch
 import os
 import re
-import shutil
 import sys
-import platform
+import json
+import site
+import yaml
 import psutil
 import signal
-import gradio as gr
-from transformers import AutoModelForMaskedLM, AutoTokenizer
-import numpy as np
+import shutil
 import librosa
-from feature_extractor import cnhubert
+import warnings
+import platform
+import traceback
+import LangSegment
+import numpy as np
+import gradio as gr
 
-from module.models import SynthesizerTrn
+
 from AR.models.t2s_lightning_module import Text2SemanticLightningModule
+from transformers import AutoModelForMaskedLM, AutoTokenizer
+from module.mel_processing import spectrogram_torch
 from text import cleaned_text_to_sequence
+from module.models import SynthesizerTrn
+from feature_extractor import cnhubert
+from multiprocessing import cpu_count
 from text.cleaner import clean_text
 from time import time as ttime
-from module.mel_processing import spectrogram_torch
-from my_utils import load_audio
+
+from tools import my_utils
+from subprocess import Popen
+
+from config import (
+    python_exec,
+    is_half,
+    exp_root,
+    webui_port_main,
+    webui_port_subfix,
+    is_share,
+)
+
+
 from tools.i18n.i18n import I18nAuto
 
+i18n = I18nAuto()
+
 import logging
-import LangSegment
 
 logging.getLogger("markdown_it").setLevel(logging.ERROR)
 logging.getLogger("urllib3").setLevel(logging.ERROR)
@@ -34,6 +52,10 @@ logging.getLogger("httpx").setLevel(logging.ERROR)
 logging.getLogger("asyncio").setLevel(logging.ERROR)
 logging.getLogger("charset_normalizer").setLevel(logging.ERROR)
 logging.getLogger("torchaudio._extension").setLevel(logging.ERROR)
+
+import torch
+
+torch.manual_seed(233333)
 
 if os.path.exists("./logs/gweight.txt"):
     with open("./logs/gweight.txt", "r", encoding="utf-8") as file:
@@ -66,7 +88,7 @@ bert_path = os.environ.get(
 now_dir = os.getcwd()
 sys.path.insert(0, now_dir)
 warnings.filterwarnings("ignore")
-torch.manual_seed(233333)
+
 tmp = os.path.join(now_dir, "logs", "temp")
 os.makedirs(tmp, exist_ok=True)
 os.environ["temp"] = tmp
@@ -81,7 +103,6 @@ if os.path.exists(tmp):
         except Exception as e:
             print(str(e))
             pass
-import site
 
 site_packages_roots = []
 for path in site.getsitepackages():
@@ -89,7 +110,6 @@ for path in site.getsitepackages():
         site_packages_roots.append(path)
 if site_packages_roots == []:
     site_packages_roots = ["%s/runtime/Lib/site-packages" % now_dir]
-# os.environ["OPENBLAS_NUM_THREADS"] = "4"
 os.environ["no_proxy"] = "localhost, 127.0.0.1, ::1"
 os.environ["all_proxy"] = ""
 for site_packages_root in site_packages_roots:
@@ -103,32 +123,7 @@ for site_packages_root in site_packages_roots:
             break
         except PermissionError:
             pass
-from tools import my_utils
-import traceback
-import shutil
-import pdb
-import gradio as gr
-from subprocess import Popen
-import signal
-from config import (
-    python_exec,
-    infer_device,
-    is_half,
-    exp_root,
-    webui_port_main,
-    webui_port_infer_tts,
-    webui_port_uvr5,
-    webui_port_subfix,
-    is_share,
-)
-from tools.i18n.i18n import I18nAuto
 
-i18n = I18nAuto()
-from scipy.io import wavfile
-from tools.my_utils import load_audio
-from multiprocessing import cpu_count
-
-# os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1' # 当遇到mps不支持的步骤时使用cpu
 
 n_cpu = cpu_count()
 
@@ -137,7 +132,6 @@ gpu_infos = []
 mem = []
 if_gpu_ok = False
 
-# 判断是否有能用来训练和加速推理的N卡
 if torch.cuda.is_available() or ngpu != 0:
     for i in range(ngpu):
         gpu_name = torch.cuda.get_device_name(i)
@@ -166,8 +160,7 @@ if torch.cuda.is_available() or ngpu != 0:
                 "4060",
             ]
         ):
-            # A10#A100#V100#A40#P40#M40#K80#A4500
-            if_gpu_ok = True  # 至少有一张能用的N卡
+            if_gpu_ok = True
             gpu_infos.append("%s\t%s" % (i, gpu_name))
             mem.append(
                 int(
@@ -178,11 +171,6 @@ if torch.cuda.is_available() or ngpu != 0:
                     + 0.4
                 )
             )
-# # 判断是否支持mps加速
-# if torch.backends.mps.is_available():
-#     if_gpu_ok = True
-#     gpu_infos.append("%s\t%s" % ("0", "Apple GPU"))
-#     mem.append(psutil.virtual_memory().total/ 1024 / 1024 / 1024) # 实测使用系统内存作为显存不会爆显存
 
 if if_gpu_ok and len(gpu_infos) > 0:
     gpu_info = "\n".join(gpu_infos)
@@ -312,7 +300,7 @@ change_gpt_weights(gpt_path)
 
 
 def get_spepc(hps, filename):
-    audio = load_audio(filename, int(hps.data.sampling_rate))
+    audio = my_utils.load_audio(filename, int(hps.data.sampling_rate))
     audio = torch.FloatTensor(audio)
     audio_norm = audio
     audio_norm = audio_norm.unsqueeze(0)
@@ -328,12 +316,12 @@ def get_spepc(hps, filename):
 
 
 dict_language = {
-    i18n("中文"): "all_zh",  # 全部按中文识别
-    i18n("英文"): "en",  # 全部按英文识别#######不变
-    i18n("日文"): "all_ja",  # 全部按日文识别
-    i18n("中英混合"): "zh",  # 按中英混合识别####不变
-    i18n("日英混合"): "ja",  # 按日英混合识别####不变
-    i18n("多语种混合"): "auto",  # 多语种启动切分识别语种
+    i18n("Chinese"): "all_zh",
+    i18n("English"): "en",
+    i18n("Japanese"): "all_ja",
+    i18n("Chinese-English mix"): "zh",
+    i18n("Japanese-English mix"): "ja",
+    i18n("Multilingual mix"): "auto",
 }
 
 
@@ -349,7 +337,7 @@ dtype = torch.float16 if is_half == True else torch.float32
 def get_bert_inf(phones, word2ph, norm_text, language):
     language = language.replace("all_", "")
     if language == "zh":
-        bert = get_bert_feature(norm_text, word2ph).to(device)  # .to(dtype)
+        bert = get_bert_feature(norm_text, word2ph).to(device)
     else:
         bert = torch.zeros(
             (1024, len(phones)),
@@ -389,7 +377,6 @@ def get_phones_and_bert(text, language):
             LangSegment.setfilters(["en"])
             formattext = " ".join(tmp["text"] for tmp in LangSegment.getTexts(text))
         else:
-            # 因无法区别中日文汉字,以用户输入为准
             formattext = text
         while "  " in formattext:
             formattext = formattext.replace("  ", " ")
@@ -418,7 +405,6 @@ def get_phones_and_bert(text, language):
                 if tmp["lang"] == "en":
                     langlist.append(tmp["lang"])
                 else:
-                    # 因无法区别中日文汉字,以用户输入为准
                     langlist.append(language)
                 textlist.append(tmp["text"])
         print(textlist)
@@ -464,7 +450,7 @@ def get_tts_wav(
     prompt_language,
     text,
     text_language,
-    how_to_cut=i18n("不切"),
+    how_to_cut,
     top_k=20,
     top_p=0.6,
     temperature=0.6,
@@ -504,9 +490,7 @@ def get_tts_wav(
         wav16k = torch.cat([wav16k, zero_wav_torch])
         ssl_content = ssl_model.model(wav16k.unsqueeze(0))[
             "last_hidden_state"
-        ].transpose(
-            1, 2
-        )  # .float()
+        ].transpose(1, 2)
         codes = vq_model.extract_latent(ssl_content)
 
         prompt_semantic = codes[0, 0]
@@ -532,7 +516,6 @@ def get_tts_wav(
         phones1, bert1, norm_text1 = get_phones_and_bert(prompt_text, prompt_language)
 
     for text in texts:
-        # 解决输入目标文本的空行导致报错的问题
         if len(text.strip()) == 0:
             continue
         if text[-1] not in splits:
@@ -554,29 +537,23 @@ def get_tts_wav(
         prompt = prompt_semantic.unsqueeze(0).to(device)
         t2 = ttime()
         with torch.no_grad():
-            # pred_semantic = t2s_model.model.infer(
             pred_semantic, idx = t2s_model.model.infer_panel(
                 all_phoneme_ids,
                 all_phoneme_len,
                 None if ref_free else prompt,
                 bert,
-                # prompt_phone_len=ph_offset,
                 top_k=top_k,
                 top_p=top_p,
                 temperature=temperature,
                 early_stop_num=hz * max_sec,
             )
         t3 = ttime()
-        # print(pred_semantic.shape,idx)
-        pred_semantic = pred_semantic[:, -idx:].unsqueeze(
-            0
-        )  # .unsqueeze(0)#mq要多unsqueeze一次
-        refer = get_spepc(hps, ref_wav_path)  # .to(device)
+        pred_semantic = pred_semantic[:, -idx:].unsqueeze(0)
+        refer = get_spepc(hps, ref_wav_path)
         if is_half == True:
             refer = refer.half().to(device)
         else:
             refer = refer.to(device)
-        # audio = vq_model.decode(pred_semantic, all_phoneme_ids, refer).detach().cpu().numpy()[0, 0]
         audio = (
             vq_model.decode(
                 pred_semantic,
@@ -586,8 +563,8 @@ def get_tts_wav(
             .detach()
             .cpu()
             .numpy()[0, 0]
-        )  ###试试重建不带上prompt部分
-        max_audio = np.abs(audio).max()  # 简单防止16bit爆音
+        )
+        max_audio = np.abs(audio).max()
         if max_audio > 1:
             audio /= max_audio
         audio_opt.append(audio)
@@ -608,7 +585,7 @@ def split(todo_text):
     todo_texts = []
     while 1:
         if i_split_head >= len_text:
-            break  # 结尾一定有标点，所以直接跳出即可，最后一段在上次已加入
+            break
         if todo_text[i_split_head] in splits:
             i_split_head += 1
             todo_texts.append(todo_text[i_split_tail:i_split_head])
@@ -649,8 +626,7 @@ def cut2(inp):
             tmp_str = ""
     if tmp_str != "":
         opts.append(tmp_str)
-    # print(opts)
-    if len(opts) > 1 and len(opts[-1]) < 50:  ##如果最后一个太短了，和前一个合一起
+    if len(opts) > 1 and len(opts[-1]) < 50:
         opts[-2] = opts[-2] + opts[-1]
         opts = opts[:-1]
     return "\n".join(opts)
@@ -666,15 +642,11 @@ def cut4(inp):
     return "\n".join(["%s" % item for item in inp.strip(".").split(".")])
 
 
-# contributed by https://github.com/AI-Hobbyist/GPT-SoVITS/blob/main/GPT_SoVITS/inference_webui.py
 def cut5(inp):
-    # if not re.search(r'[^\w\s]', inp[-1]):
-    # inp += '。'
     inp = inp.strip("\n")
     punds = r"[,.;?!、，。？！;：…]"
     items = re.split(f"({punds})", inp)
     mergeitems = ["".join(group) for group in zip(items[::2], items[1::2])]
-    # 在句子不存在符号或句尾无符号的时候保证文本完整
     if len(items) % 2 == 1:
         mergeitems.append(items[-1])
     opt = "\n".join(mergeitems)
@@ -682,9 +654,7 @@ def cut5(inp):
 
 
 def custom_sort_key(s):
-    # 使用正则表达式提取字符串中的数字部分和非数字部分
     parts = re.split("(\d+)", s)
-    # 将数字部分转换为整数，非数字部分保持不变
     parts = [int(part) if part.isdigit() else part for part in parts]
     return parts
 
@@ -745,9 +715,7 @@ SoVITS_names, GPT_names = get_weights_names()
 
 
 def custom_sort_key(s):
-    # 使用正则表达式提取字符串中的数字部分和非数字部分
     parts = re.split("(\d+)", s)
-    # 将数字部分转换为整数，非数字部分保持不变
     parts = [int(part) if part.isdigit() else part for part in parts]
     return parts
 
@@ -770,18 +738,17 @@ def kill_proc_tree(pid, including_parent=True):
     try:
         parent = psutil.Process(pid)
     except psutil.NoSuchProcess:
-        # Process already terminated
         return
 
     children = parent.children(recursive=True)
     for child in children:
         try:
-            os.kill(child.pid, signal.SIGTERM)  # or signal.SIGKILL
+            os.kill(child.pid, signal.SIGTERM)
         except OSError:
             pass
     if including_parent:
         try:
-            os.kill(parent.pid, signal.SIGTERM)  # or signal.SIGKILL
+            os.kill(parent.pid, signal.SIGTERM)
         except OSError:
             pass
 
@@ -847,7 +814,6 @@ def open_asr(asr_inp_dir, asr_opt_dir, asr_model, asr_model_size, asr_lang):
             "__type__": "update",
             "visible": False,
         }, {"__type__": "update", "visible": True}
-        # return None
 
 
 def close_asr():
@@ -874,7 +840,10 @@ def open_denoise(denoise_inp_dir, denoise_opt_dir):
             "float16" if is_half == True else "float32",
         )
 
-        yield "语音降噪任务开启：%s" % cmd, {"__type__": "update", "visible": False}, {
+        yield "Voice Noise Reduction task on: %s" % cmd, {
+            "__type__": "update",
+            "visible": False,
+        }, {
             "__type__": "update",
             "visible": True,
         }
@@ -882,16 +851,18 @@ def open_denoise(denoise_inp_dir, denoise_opt_dir):
         p_denoise = Popen(cmd, shell=True)
         p_denoise.wait()
         p_denoise = None
-        yield f"语音降噪任务完成, 查看终端进行下一步", {
+        yield f"Voice Noise Reduction task completed, view terminal for next step", {
             "__type__": "update",
             "visible": True,
         }, {"__type__": "update", "visible": False}
     else:
-        yield "已有正在进行的语音降噪任务，需先终止才能开启下一次任务", {
+        yield "There is already a voice noise reduction task in progress that needs to be terminated before the next task can be started.", {
             "__type__": "update",
             "visible": False,
-        }, {"__type__": "update", "visible": True}
-        # return None
+        }, {
+            "__type__": "update",
+            "visible": True,
+        }
 
 
 def close_denoise():
@@ -900,7 +871,7 @@ def close_denoise():
         kill_process(p_denoise.pid)
         p_denoise = None
     return (
-        "已终止语音降噪进程",
+        "Speech noise reduction process has been terminated",
         {"__type__": "update", "visible": True},
         {"__type__": "update", "visible": False},
     )
@@ -951,7 +922,10 @@ def open1Ba(
             python_exec,
             tmp_config_path,
         )
-        yield "SoVITS训练开始：%s" % cmd, {"__type__": "update", "visible": False}, {
+        yield "SoVITS training starts:%s" % cmd, {
+            "__type__": "update",
+            "visible": False,
+        }, {
             "__type__": "update",
             "visible": True,
         }
@@ -959,15 +933,18 @@ def open1Ba(
         p_train_SoVITS = Popen(cmd, shell=True)
         p_train_SoVITS.wait()
         p_train_SoVITS = None
-        yield "SoVITS训练完成", {"__type__": "update", "visible": True}, {
+        yield "SoVITS training completed", {"__type__": "update", "visible": True}, {
             "__type__": "update",
             "visible": False,
         }
     else:
-        yield "已有正在进行的SoVITS训练任务，需先终止才能开启下一次任务", {
+        yield "There is already a SoVITS training task in progress that needs to be terminated before the next task can be started", {
             "__type__": "update",
             "visible": False,
-        }, {"__type__": "update", "visible": True}
+        }, {
+            "__type__": "update",
+            "visible": True,
+        }
 
 
 def close1Ba():
@@ -976,7 +953,7 @@ def close1Ba():
         kill_process(p_train_SoVITS.pid)
         p_train_SoVITS = None
     return (
-        "已终止SoVITS训练",
+        "SoVITS training has been terminated",
         {"__type__": "update", "visible": True},
         {"__type__": "update", "visible": False},
     )
@@ -1024,12 +1001,14 @@ def open1Bb(
         tmp_config_path = "%s/tmp_s1.yaml" % tmp
         with open(tmp_config_path, "w") as f:
             f.write(yaml.dump(data, default_flow_style=False))
-        # cmd = '"%s" GPT_SoVITS/s1_train.py --config_file "%s" --train_semantic_path "%s/6-name2semantic.tsv" --train_phoneme_path "%s/2-name2text.txt" --output_dir "%s/logs_s1"'%(python_exec,tmp_config_path,s1_dir,s1_dir,s1_dir)
         cmd = '"%s" GPT_SoVITS/s1_train.py --config_file "%s" ' % (
             python_exec,
             tmp_config_path,
         )
-        yield "GPT训练开始：%s" % cmd, {"__type__": "update", "visible": False}, {
+        yield "GPT training starts: %s" % cmd, {
+            "__type__": "update",
+            "visible": False,
+        }, {
             "__type__": "update",
             "visible": True,
         }
@@ -1037,15 +1016,18 @@ def open1Bb(
         p_train_GPT = Popen(cmd, shell=True)
         p_train_GPT.wait()
         p_train_GPT = None
-        yield "GPT训练完成", {"__type__": "update", "visible": True}, {
+        yield "GPT training completed", {"__type__": "update", "visible": True}, {
             "__type__": "update",
             "visible": False,
         }
     else:
-        yield "已有正在进行的GPT训练任务，需先终止才能开启下一次任务", {
+        yield "There is already a GPT training task in progress that needs to be terminated before the next task can be started", {
             "__type__": "update",
             "visible": False,
-        }, {"__type__": "update", "visible": True}
+        }, {
+            "__type__": "update",
+            "visible": True,
+        }
 
 
 def close1Bb():
@@ -1054,7 +1036,7 @@ def close1Bb():
         kill_process(p_train_GPT.pid)
         p_train_GPT = None
     return (
-        "已终止GPT训练",
+        "GPT training has been terminated",
         {"__type__": "update", "visible": True},
         {"__type__": "update", "visible": False},
     )
@@ -1079,7 +1061,7 @@ def open_slice(
     inp = my_utils.clean_path(inp)
     opt_root = my_utils.clean_path(opt_root)
     if os.path.exists(inp) == False:
-        yield "输入路径不存在", {"__type__": "update", "visible": True}, {
+        yield "Input path does not exist", {"__type__": "update", "visible": True}, {
             "__type__": "update",
             "visible": False,
         }
@@ -1089,7 +1071,7 @@ def open_slice(
     elif os.path.isdir(inp):
         pass
     else:
-        yield "输入路径存在但既不是文件也不是文件夹", {
+        yield "Input path exists but is neither a file nor a folder", {
             "__type__": "update",
             "visible": True,
         }, {"__type__": "update", "visible": False}
@@ -1148,7 +1130,7 @@ def close_slice():
                 traceback.print_exc()
         ps_slice = []
     return (
-        "已终止所有切割进程",
+        "All cutting processes have been terminated",
         {"__type__": "update", "visible": True},
         {"__type__": "update", "visible": False},
     )
@@ -1186,7 +1168,7 @@ def open1a(inp_text, inp_wav_dir, exp_name, gpu_numbers, bert_pretrained_dir):
 
             p = Popen(cmd, shell=True)
             ps1a.append(p)
-        yield "文本进程执行中", {"__type__": "update", "visible": False}, {
+        yield "Text process in progress", {"__type__": "update", "visible": False}, {
             "__type__": "update",
             "visible": True,
         }
@@ -1202,15 +1184,18 @@ def open1a(inp_text, inp_wav_dir, exp_name, gpu_numbers, bert_pretrained_dir):
         with open(path_text, "w", encoding="utf8") as f:
             f.write("\n".join(opt) + "\n")
         ps1a = []
-        yield "文本进程结束", {"__type__": "update", "visible": True}, {
+        yield "End of the text process", {"__type__": "update", "visible": True}, {
             "__type__": "update",
             "visible": False,
         }
     else:
-        yield "已有正在进行的文本任务，需先终止才能开启下一次任务", {
+        yield "There is already a text task in progress that needs to be terminated before the next task can be started.", {
             "__type__": "update",
             "visible": False,
-        }, {"__type__": "update", "visible": True}
+        }, {
+            "__type__": "update",
+            "visible": True,
+        }
 
 
 def close1a():
@@ -1223,7 +1208,7 @@ def close1a():
                 traceback.print_exc()
         ps1a = []
     return (
-        "已终止所有1a进程",
+        "All processes have been terminated",
         {"__type__": "update", "visible": True},
         {"__type__": "update", "visible": False},
     )
@@ -1262,22 +1247,31 @@ def open1b(inp_text, inp_wav_dir, exp_name, gpu_numbers, ssl_pretrained_dir):
 
             p = Popen(cmd, shell=True)
             ps1b.append(p)
-        yield "SSL提取进程执行中", {"__type__": "update", "visible": False}, {
+        yield "SSL extraction process in progress", {
+            "__type__": "update",
+            "visible": False,
+        }, {
             "__type__": "update",
             "visible": True,
         }
         for p in ps1b:
             p.wait()
         ps1b = []
-        yield "SSL提取进程结束", {"__type__": "update", "visible": True}, {
+        yield "End of SSL extraction process", {
+            "__type__": "update",
+            "visible": True,
+        }, {
             "__type__": "update",
             "visible": False,
         }
     else:
-        yield "已有正在进行的SSL提取任务，需先终止才能开启下一次任务", {
+        yield "There is already an SSL extraction task in progress that needs to be terminated before the next task can be started.", {
             "__type__": "update",
             "visible": False,
-        }, {"__type__": "update", "visible": True}
+        }, {
+            "__type__": "update",
+            "visible": True,
+        }
 
 
 def close1b():
@@ -1290,7 +1284,7 @@ def close1b():
                 traceback.print_exc()
         ps1b = []
     return (
-        "已终止所有1b进程",
+        "All processes have been terminated",
         {"__type__": "update", "visible": True},
         {"__type__": "update", "visible": False},
     )
@@ -1327,7 +1321,10 @@ def open1c(inp_text, exp_name, gpu_numbers, pretrained_s2G_path):
 
             p = Popen(cmd, shell=True)
             ps1c.append(p)
-        yield "语义token提取进程执行中", {"__type__": "update", "visible": False}, {
+        yield "Semantic token extraction process in execution", {
+            "__type__": "update",
+            "visible": False,
+        }, {
             "__type__": "update",
             "visible": True,
         }
@@ -1343,15 +1340,21 @@ def open1c(inp_text, exp_name, gpu_numbers, pretrained_s2G_path):
         with open(path_semantic, "w", encoding="utf8") as f:
             f.write("\n".join(opt) + "\n")
         ps1c = []
-        yield "语义token提取进程结束", {"__type__": "update", "visible": True}, {
+        yield "End of semantic token extraction process", {
+            "__type__": "update",
+            "visible": True,
+        }, {
             "__type__": "update",
             "visible": False,
         }
     else:
-        yield "已有正在进行的语义token提取任务，需先终止才能开启下一次任务", {
+        yield "There is already a semantic token extraction task in progress that needs to be terminated before the next task can be started", {
             "__type__": "update",
             "visible": False,
-        }, {"__type__": "update", "visible": True}
+        }, {
+            "__type__": "update",
+            "visible": True,
+        }
 
 
 def close1c():
@@ -1364,13 +1367,12 @@ def close1c():
                 traceback.print_exc()
         ps1c = []
     return (
-        "已终止所有语义token进程",
+        "All semantic token processes have been terminated",
         {"__type__": "update", "visible": True},
         {"__type__": "update", "visible": False},
     )
 
 
-#####inp_text,inp_wav_dir,exp_name,gpu_numbers1a,gpu_numbers1Ba,gpu_numbers1c,bert_pretrained_dir,cnhubert_base_dir,pretrained_s2G
 ps1abc = []
 
 
@@ -1391,7 +1393,6 @@ def open1abc(
     if ps1abc == []:
         opt_dir = "%s/%s" % (exp_root, exp_name)
         try:
-            #############################1a
             path_text = "%s/2-name2text.txt" % opt_dir
             if os.path.exists(path_text) == False or (
                 os.path.exists(path_text) == True
@@ -1423,7 +1424,7 @@ def open1abc(
 
                     p = Popen(cmd, shell=True)
                     ps1abc.append(p)
-                yield "进度：1a-ing", {"__type__": "update", "visible": False}, {
+                yield "Progress: 1a-ing", {"__type__": "update", "visible": False}, {
                     "__type__": "update",
                     "visible": True,
                 }
@@ -1431,9 +1432,7 @@ def open1abc(
                     p.wait()
 
                 opt = []
-                for i_part in range(
-                    all_parts
-                ):  # txt_path="%s/2-name2text-%s.txt"%(opt_dir,i_part)
+                for i_part in range(all_parts):
                     txt_path = "%s/2-name2text-%s.txt" % (opt_dir, i_part)
                     with open(txt_path, "r", encoding="utf8") as f:
                         opt += f.read().strip("\n").split("\n")
@@ -1446,7 +1445,6 @@ def open1abc(
                 "visible": True,
             }
             ps1abc = []
-            #############################1b
             config = {
                 "inp_text": inp_text,
                 "inp_wav_dir": inp_wav_dir,
@@ -1472,18 +1470,20 @@ def open1abc(
 
                 p = Popen(cmd, shell=True)
                 ps1abc.append(p)
-            yield "进度：1a-done, 1b-ing", {"__type__": "update", "visible": False}, {
+            yield "Progress: 1a-done, 1b-ing", {
+                "__type__": "update",
+                "visible": False,
+            }, {
                 "__type__": "update",
                 "visible": True,
             }
             for p in ps1abc:
                 p.wait()
-            yield "进度：1a1b-done", {"__type__": "update", "visible": False}, {
+            yield "Progress: 1a1b-done", {"__type__": "update", "visible": False}, {
                 "__type__": "update",
                 "visible": True,
             }
             ps1abc = []
-            #############################1c
             path_semantic = "%s/6-name2semantic.tsv" % opt_dir
             if os.path.exists(path_semantic) == False or (
                 os.path.exists(path_semantic) == True
@@ -1514,7 +1514,7 @@ def open1abc(
 
                     p = Popen(cmd, shell=True)
                     ps1abc.append(p)
-                yield "进度：1a1b-done, 1cing", {
+                yield "Progress: 1a1b-done, 1cing", {
                     "__type__": "update",
                     "visible": False,
                 }, {"__type__": "update", "visible": True}
@@ -1529,27 +1529,36 @@ def open1abc(
                     os.remove(semantic_path)
                 with open(path_semantic, "w", encoding="utf8") as f:
                     f.write("\n".join(opt) + "\n")
-                yield "进度：all-done", {"__type__": "update", "visible": False}, {
+                yield "Progress: all-done", {"__type__": "update", "visible": False}, {
                     "__type__": "update",
                     "visible": True,
                 }
             ps1abc = []
-            yield "一键三连进程结束", {"__type__": "update", "visible": True}, {
+            yield "One-click triple process termination", {
+                "__type__": "update",
+                "visible": True,
+            }, {
                 "__type__": "update",
                 "visible": False,
             }
         except:
             traceback.print_exc()
             close1abc()
-            yield "一键三连中途报错", {"__type__": "update", "visible": True}, {
+            yield "Error in the middle of a one-touch process", {
+                "__type__": "update",
+                "visible": True,
+            }, {
                 "__type__": "update",
                 "visible": False,
             }
     else:
-        yield "已有正在进行的一键三连任务，需先终止才能开启下一次任务", {
+        yield "There is already a one-click trifecta task in progress that needs to be terminated before the next task can be started.", {
             "__type__": "update",
             "visible": False,
-        }, {"__type__": "update", "visible": True}
+        }, {
+            "__type__": "update",
+            "visible": True,
+        }
 
 
 def close1abc():
@@ -1695,16 +1704,14 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
                         )
                         asr_info = gr.Textbox(label=i18n("Output Information"))
 
-                def change_lang_choices(key):  # 根据选择的模型修改可选的语言
-                    # return gr.Dropdown(choices=asr_dict[key]['lang'])
+                def change_lang_choices(key):
                     return {
                         "__type__": "update",
                         "choices": asr_dict[key]["lang"],
                         "value": asr_dict[key]["lang"][0],
                     }
 
-                def change_size_choices(key):  # 根据选择的模型修改可选的模型尺寸
-                    # return gr.Dropdown(choices=asr_dict[key]['size'])
+                def change_size_choices(key):
                     return {"__type__": "update", "choices": asr_dict[key]["size"]}
 
                 asr_model.change(change_lang_choices, [asr_model], [asr_lang])
@@ -1852,142 +1859,142 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
             button1abc_close.click(
                 close1abc, [], [info1abc, button1abc_open, button1abc_close]
             )
-        
+
             with gr.Accordion(
-                    i18n(
-                        "SoVITS training. The model file output for sharing is under SoVITS_weights."
-                    )
-                ):
-                    with gr.Column():
-                        with gr.Row():
-                            batch_size = gr.Slider(
-                                minimum=1,
-                                maximum=40,
-                                step=1,
-                                label=i18n("Batch size"),
-                                value=default_batch_size,
-                                interactive=True,
-                            )
-                            total_epoch = gr.Slider(
-                                minimum=1,
-                                maximum=25,
-                                step=1,
-                                label=i18n("Total epoch"),
-                                value=8,
-                                interactive=True,
-                            )
-                            text_low_lr_rate = gr.Slider(
-                                minimum=0.2,
-                                maximum=0.6,
-                                step=0.05,
-                                label=i18n("Text Module Learning Rate Weights"),
-                                value=0.4,
-                                interactive=True,
-                            )
-                            save_every_epoch = gr.Slider(
-                                minimum=1,
-                                maximum=25,
-                                step=1,
-                                label=i18n("Save frequency"),
-                                value=4,
-                                interactive=True,
-                            )
-                        with gr.Row():
-                            if_save_latest = gr.Checkbox(
-                                label=i18n(
-                                    "Whether to save only the latest ckpt file to save hard disk space"
-                                ),
-                                value=True,
-                                interactive=True,
-                                show_label=True,
-                            )
-                            if_save_every_weights = gr.Checkbox(
-                                label=i18n(
-                                    "Whether or not to save the final miniatures to the weights folder at each save time point"
-                                ),
-                                value=True,
-                                interactive=True,
-                                show_label=True,
-                            )
+                i18n(
+                    "SoVITS training. The model file output for sharing is under SoVITS_weights."
+                )
+            ):
+                with gr.Column():
+                    with gr.Row():
+                        batch_size = gr.Slider(
+                            minimum=1,
+                            maximum=40,
+                            step=1,
+                            label=i18n("Batch size"),
+                            value=default_batch_size,
+                            interactive=True,
+                        )
+                        total_epoch = gr.Slider(
+                            minimum=1,
+                            maximum=25,
+                            step=1,
+                            label=i18n("Total epoch"),
+                            value=8,
+                            interactive=True,
+                        )
+                        text_low_lr_rate = gr.Slider(
+                            minimum=0.2,
+                            maximum=0.6,
+                            step=0.05,
+                            label=i18n("Text Module Learning Rate Weights"),
+                            value=0.4,
+                            interactive=True,
+                        )
+                        save_every_epoch = gr.Slider(
+                            minimum=1,
+                            maximum=25,
+                            step=1,
+                            label=i18n("Save frequency"),
+                            value=4,
+                            interactive=True,
+                        )
+                    with gr.Row():
+                        if_save_latest = gr.Checkbox(
+                            label=i18n(
+                                "Whether to save only the latest ckpt file to save hard disk space"
+                            ),
+                            value=True,
+                            interactive=True,
+                            show_label=True,
+                        )
+                        if_save_every_weights = gr.Checkbox(
+                            label=i18n(
+                                "Whether or not to save the final miniatures to the weights folder at each save time point"
+                            ),
+                            value=True,
+                            interactive=True,
+                            show_label=True,
+                        )
 
-                    with gr.Column():
-                        button1Ba_open = gr.Button(
-                            i18n("Run SoVITS training"),
-                            variant="primary",
-                            visible=True,
-                        )
-                        button1Ba_close = gr.Button(
-                            i18n("Stop SoVITS training"),
-                            variant="primary",
-                            visible=False,
-                        )
-                        info1Ba = gr.Textbox(label=i18n("Output Information"))
+                with gr.Column():
+                    button1Ba_open = gr.Button(
+                        i18n("Run SoVITS training"),
+                        variant="primary",
+                        visible=True,
+                    )
+                    button1Ba_close = gr.Button(
+                        i18n("Stop SoVITS training"),
+                        variant="primary",
+                        visible=False,
+                    )
+                    info1Ba = gr.Textbox(label=i18n("Output Information"))
             with gr.Accordion(
-                    i18n(
-                        "GPT Training. Model file output for sharing is under GPT_weights."
+                i18n(
+                    "GPT Training. Model file output for sharing is under GPT_weights."
+                )
+            ):
+                with gr.Column():
+                    with gr.Row():
+                        batch_size1Bb = gr.Slider(
+                            minimum=1,
+                            maximum=40,
+                            step=1,
+                            label=i18n("Batch size"),
+                            value=default_batch_size,
+                            interactive=True,
+                        )
+                        total_epoch1Bb = gr.Slider(
+                            minimum=2,
+                            maximum=50,
+                            step=1,
+                            label=i18n("Total epoch"),
+                            value=15,
+                            interactive=True,
+                        )
+
+                        save_every_epoch1Bb = gr.Slider(
+                            minimum=1,
+                            maximum=50,
+                            step=1,
+                            label=i18n("Save frequency"),
+                            value=5,
+                            interactive=True,
+                        )
+                    with gr.Row():
+                        if_dpo = gr.Checkbox(
+                            label=i18n(
+                                "Whether to turn on the dpo training option (experimental)"
+                            ),
+                            value=False,
+                            interactive=True,
+                            show_label=True,
+                        )
+                        if_save_latest1Bb = gr.Checkbox(
+                            label=i18n(
+                                "Whether to save only the latest ckpt file to save hard disk space"
+                            ),
+                            value=True,
+                            interactive=True,
+                            show_label=True,
+                        )
+                        if_save_every_weights1Bb = gr.Checkbox(
+                            label=i18n(
+                                "Whether or not to save the final miniatures to the weights folder at each save time point"
+                            ),
+                            value=True,
+                            interactive=True,
+                            show_label=True,
+                        )
+
+                with gr.Column():
+                    button1Bb_open = gr.Button(
+                        i18n("Run GPT training"), variant="primary", visible=True
                     )
-                ):
-                    with gr.Column():
-                        with gr.Row():
-                            batch_size1Bb = gr.Slider(
-                                minimum=1,
-                                maximum=40,
-                                step=1,
-                                label=i18n("Batch size"),
-                                value=default_batch_size,
-                                interactive=True,
-                            )
-                            total_epoch1Bb = gr.Slider(
-                                minimum=2,
-                                maximum=50,
-                                step=1,
-                                label=i18n("Total epoch"),
-                                value=15,
-                                interactive=True,
-                            )
-
-                            save_every_epoch1Bb = gr.Slider(
-                                minimum=1,
-                                maximum=50,
-                                step=1,
-                                label=i18n("Save frequency"),
-                                value=5,
-                                interactive=True,
-                            )
-                        with gr.Row():
-                            if_dpo = gr.Checkbox(
-                                label=i18n(
-                                    "Whether to turn on the dpo training option (experimental)"
-                                ),
-                                value=False,
-                                interactive=True,
-                                show_label=True,
-                            )
-                            if_save_latest1Bb = gr.Checkbox(
-                                label=i18n(
-                                    "Whether to save only the latest ckpt file to save hard disk space"
-                                ),
-                                value=True,
-                                interactive=True,
-                                show_label=True,
-                            )
-                            if_save_every_weights1Bb = gr.Checkbox(
-                                label=i18n(
-                                    "Whether or not to save the final miniatures to the weights folder at each save time point"
-                                ),
-                                value=True,
-                                interactive=True,
-                                show_label=True,
-                            )
-
-                    with gr.Column():
-                        button1Bb_open = gr.Button(
-                            i18n("Run GPT training"), variant="primary", visible=True
-                        )
-                        button1Bb_close = gr.Button(
-                            i18n("Stop GPT training"), variant="primary", visible=False
-                        )
-                        info1Bb = gr.Textbox(label=i18n("Output Information"))
+                    button1Bb_close = gr.Button(
+                        i18n("Stop GPT training"), variant="primary", visible=False
+                    )
+                    info1Bb = gr.Textbox(label=i18n("Output Information"))
             button1Ba_open.click(
                 open1Ba,
                 [
