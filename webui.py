@@ -1832,17 +1832,17 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
                         value="GPT_SoVITS/pretrained_models/chinese-hubert-base",
                         interactive=False,
                     )
-                    button1abc_open = gr.Button(
+                button1abc_open = gr.Button(
                         i18n("Run formatter"),
                         variant="primary",
                         visible=True,
                     )
-                    button1abc_close = gr.Button(
+                button1abc_close = gr.Button(
                         i18n("Stop formatter"),
                         variant="primary",
                         visible=False,
                     )
-                    info1abc = gr.Textbox(label=i18n("Output Information"))
+                info1abc = gr.Textbox(label=i18n("Output Information"))
 
             button1abc_open.click(
                 open1abc,
@@ -1865,7 +1865,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
 
             with gr.Accordion(
                 i18n(
-                    "SoVITS training. The model file output for sharing is under SoVITS_weights."
+                    "SoVITS training"
                 )
             ):
                 with gr.Column():
@@ -1934,7 +1934,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
                     info1Ba = gr.Textbox(label=i18n("Output Information"))
             with gr.Accordion(
                 i18n(
-                    "GPT Training. Model file output for sharing is under GPT_weights."
+                    "GPT Training"
                 )
             ):
                 with gr.Column():
