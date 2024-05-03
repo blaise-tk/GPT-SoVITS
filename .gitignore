@@ -4,6 +4,7 @@
 *.txt
 reference
 
+logs
 env
 .env
 runtime
