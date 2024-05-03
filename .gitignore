@@ -2,12 +2,7 @@
 *.exe
 
 *.txt
-output
-logs
 reference
-GPT_weights
-SoVITS_weights
-temp
 
 env
 .env
