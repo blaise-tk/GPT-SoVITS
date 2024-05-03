@@ -1,10 +1,9 @@
-import os, sys, numpy as np
+import os
 import traceback
-from scipy.io import wavfile
+import numpy as np
 
-# parent_directory = os.path.dirname(os.path.abspath(__file__))
-# sys.path.append(parent_directory)
 from my_utils import load_audio
+from scipy.io import wavfile
 from slicer import Slicer
 
 
@@ -27,28 +26,22 @@ def slice(
     elif os.path.isdir(inp):
         input = [os.path.join(inp, name) for name in sorted(list(os.listdir(inp)))]
     else:
-        return "输入路径存在但既不是文件也不是文件夹"
+        return "Input path exists but is neither a file nor a folder"
     slicer = Slicer(
-        sr=32000,  # 长音频采样率
-        threshold=int(threshold),  # 音量小于这个值视作静音的备选切割点
-        min_length=int(
-            min_length
-        ),  # 每段最小多长，如果第一段太短一直和后面段连起来直到超过这个值
-        min_interval=int(min_interval),  # 最短切割间隔
-        hop_size=int(
-            hop_size
-        ),  # 怎么算音量曲线，越小精度越大计算量越高（不是精度越大效果越好）
-        max_sil_kept=int(max_sil_kept),  # 切完后静音最多留多长
+        sr=32000,
+        threshold=int(threshold),
+        min_length=int(min_length),
+        min_interval=int(min_interval),
+        hop_size=int(hop_size),
+        max_sil_kept=int(max_sil_kept),
     )
     _max = float(_max)
     alpha = float(alpha)
     for inp_path in input[int(i_part) :: int(all_part)]:
-        # print(inp_path)
         try:
             name = os.path.basename(inp_path)
             audio = load_audio(inp_path, 32000)
-            # print(audio.shape)
-            for chunk, start, end in slicer.slice(audio):  # start和end是帧数
+            for chunk, start, end in slicer.slice(audio):
                 tmp_max = np.abs(chunk).max()
                 if tmp_max > 1:
                     chunk /= tmp_max
@@ -61,6 +54,3 @@ def slice(
                 )
         except:
             print(inp_path, "fail ->", traceback.format_exc())
-
-
-print(slice(*sys.argv[1:]))

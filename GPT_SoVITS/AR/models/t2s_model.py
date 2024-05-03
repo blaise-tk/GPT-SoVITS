@@ -161,7 +161,6 @@ class Text2SemanticDecoder(nn.Module):
         x_len = x_lens.max()
         logits = self.ar_predict_layer(xy_dec[:, x_len:])
 
-        ###### DPO #############
         reject_xy_pos, reject_xy_attn_mask, reject_targets = self.make_input_data(
             x, x_lens, reject_y, reject_y_lens, bert_feature
         )
@@ -173,8 +172,7 @@ class Text2SemanticDecoder(nn.Module):
         x_len = x_lens.max()
         reject_logits = self.ar_predict_layer(reject_xy_dec[:, x_len:])
 
-        # loss
-        # from feiteng: 每次 duration 越多, 梯度更新也应该更多, 所以用 sum
+
 
         loss_1 = F.cross_entropy(logits.permute(0, 2, 1), targets, reduction="sum")
         acc = self.ar_accuracy_metric(logits.permute(0, 2, 1).detach(), targets).item()
@@ -311,7 +309,6 @@ class Text2SemanticDecoder(nn.Module):
                 if prompts.shape[1] == y.shape[1]:
                     y = torch.concat([y, torch.zeros_like(samples)], dim=1)
                     print("bad zero prediction")
-                print(f"T2S Decoding EOS [{prefix_len} -> {y.shape[1]}]")
                 break
             # 本次生成的 semantic_ids 和之前的 y 构成新的 y
             # print(samples.shape)#[1,1]#第一个1是bs
@@ -329,9 +326,9 @@ class Text2SemanticDecoder(nn.Module):
 
     def infer_panel(
         self,
-        x,  #####全部文本token
+        x,  
         x_lens,
-        prompts,  ####参考音频token
+        prompts, 
         bert_feature,
         top_k: int = -100,
         top_p: int = 100,
@@ -348,19 +345,14 @@ class Text2SemanticDecoder(nn.Module):
         x_len = x.shape[1]
         x_attn_mask = torch.zeros((x_len, x_len), dtype=torch.bool)
         stop = False
-        # print(1111111,self.num_layers)
         cache = {
             "all_stage": self.num_layers,
-            "k": [None] * self.num_layers,  ###根据配置自己手写
+            "k": [None] * self.num_layers,  
             "v": [None] * self.num_layers,
-            # "xy_pos":None,##y_pos位置编码每次都不一样的没法缓存，每次都要重新拼xy_pos.主要还是写法原因，其实是可以历史统一一样的，但也没啥计算量就不管了
-            "y_emb": None,  ##只需要对最新的samples求emb，再拼历史的就行
-            # "logits":None,###原版就已经只对结尾求再拼接了，不用管
-            # "xy_dec":None,###不需要，本来只需要最后一个做logits
+            "y_emb": None,  
             "first_infer": 1,
             "stage": 0,
         }
-        ###################  first step ##########################
         if y is not None:
             y_emb = self.ar_audio_embedding(y)
             y_len = y_emb.shape[1]
@@ -380,10 +372,10 @@ class Text2SemanticDecoder(nn.Module):
 
         x_attn_mask_pad = F.pad(
             x_attn_mask,
-            (0, y_len),  ###xx的纯0扩展到xx纯0+xy纯1，(x,x+y)
+            (0, y_len), 
             value=True,
         )
-        y_attn_mask = F.pad(  ###yy的右上1扩展到左边xy的0,(y,x+y)
+        y_attn_mask = F.pad(  
             torch.triu(torch.ones(y_len, y_len, dtype=torch.bool), diagonal=1),
             (x_len, 0),
             value=False,
@@ -395,10 +387,9 @@ class Text2SemanticDecoder(nn.Module):
             xy_dec, _ = self.h((xy_pos, None), mask=xy_attn_mask, cache=cache)
             logits = self.ar_predict_layer(
                 xy_dec[:, -1]
-            )  ##不用改，如果用了cache的默认就是只有一帧，取最后一帧一样的
-            # samples = topk_sampling(logits, top_k=top_k, top_p=1.0, temperature=temperature)
-            if idx == 0:  ###第一次跑不能EOS否则没有了
-                logits = logits[:, :-1]  ###刨除1024终止符号的概率
+            )  
+            if idx == 0: 
+                logits = logits[:, :-1]  
             samples = sample(
                 logits[0],
                 y,
@@ -407,8 +398,7 @@ class Text2SemanticDecoder(nn.Module):
                 repetition_penalty=1.35,
                 temperature=temperature,
             )[0].unsqueeze(0)
-            # 本次生成的 semantic_ids 和之前的 y 构成新的 y
-            # print(samples.shape)#[1,1]#第一个1是bs
+ 
             y = torch.concat([y, samples], dim=1)
 
             if early_stop_num != -1 and (y.shape[1] - prefix_len) > early_stop_num:
@@ -416,19 +406,14 @@ class Text2SemanticDecoder(nn.Module):
                 stop = True
 
             if torch.argmax(logits, dim=-1)[0] == self.EOS or samples[0, 0] == self.EOS:
-                # print(torch.argmax(logits, dim=-1)[0] == self.EOS, samples[0, 0] == self.EOS)
                 stop = True
             if stop:
-                # if prompts.shape[1] == y.shape[1]:
-                #     y = torch.concat([y, torch.zeros_like(samples)], dim=1)
-                #     print("bad zero prediction")
+    
                 if y.shape[1] == 0:
                     y = torch.concat([y, torch.zeros_like(samples)], dim=1)
                     print("bad zero prediction")
-                print(f"T2S Decoding EOS [{prefix_len} -> {y.shape[1]}]")
                 break
 
-            ####################### update next step ###################################
             cache["first_infer"] = 0
             if cache["y_emb"] is not None:
                 y_emb = torch.cat(

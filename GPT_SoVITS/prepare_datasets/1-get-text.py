@@ -11,29 +11,16 @@ os.environ["CUDA_VISIBLE_DEVICES"] = os.environ.get("_CUDA_VISIBLE_DEVICES")
 opt_dir = os.environ.get("opt_dir")
 bert_pretrained_dir = os.environ.get("bert_pretrained_dir")
 is_half = eval(os.environ.get("is_half", "True"))
-import sys, numpy as np, traceback, pdb
-import os.path
-from glob import glob
-from tqdm import tqdm
+import traceback
 from text.cleaner import clean_text
 import torch
 from transformers import AutoModelForMaskedLM, AutoTokenizer
-import numpy as np
-
-# inp_text=sys.argv[1]
-# inp_wav_dir=sys.argv[2]
-# exp_name=sys.argv[3]
-# i_part=sys.argv[4]
-# all_parts=sys.argv[5]
-# os.environ["CUDA_VISIBLE_DEVICES"]=sys.argv[6]#i_gpu
-# opt_dir="/data/docker/liujing04/gpt-vits/fine_tune_dataset/%s"%exp_name
-# bert_pretrained_dir="/data/docker/liujing04/bert-vits2/Bert-VITS2-master20231106/bert/chinese-roberta-wwm-ext-large"
 
 from time import time as ttime
 import shutil
 
 
-def my_save(fea, path):  #####fix issue: torch.save doesn't support chinese path
+def my_save(fea, path):  # #fix issue: torch.save doesn't support chinese path
     dir = os.path.dirname(path)
     name = os.path.basename(path)
     # tmp_path="%s/%s%s.pth"%(dir,ttime(),i_part)

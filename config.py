@@ -17,12 +17,10 @@ exp_root = "logs"
 python_exec = os.getenv("PYTHON_EXEC", "env/python")
 infer_device = "cuda" if torch.cuda.is_available() else "cpu"
 
-webui_port_main = 9874
-webui_port_uvr5 = 9873
-webui_port_infer_tts = 9872
-webui_port_subfix = 9871
+webui_port_main = 6969
+webui_port_subfix = 9696
 
-api_port = 9880
+api_port = 9966
 
 gpu_name = torch.cuda.get_device_name(0) if infer_device == "cuda" else ""
 if "cuda" in infer_device and (
@@ -51,8 +49,6 @@ class Config:
         self.infer_device = infer_device
 
         self.webui_port_main = webui_port_main
-        self.webui_port_uvr5 = webui_port_uvr5
-        self.webui_port_infer_tts = webui_port_infer_tts
         self.webui_port_subfix = webui_port_subfix
 
         self.api_port = api_port

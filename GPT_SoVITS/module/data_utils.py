@@ -69,8 +69,8 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         random.seed(1234)
         random.shuffle(self.audiopaths_sid_text)
 
-        print("phoneme_data_len:", len(self.phoneme_data.keys()))
-        print("wav_data_len:", len(self.audiopaths_sid_text))
+        # print("phoneme_data_len:", len(self.phoneme_data.keys()))
+        # print("wav_data_len:", len(self.audiopaths_sid_text))
 
         audiopaths_sid_text_new = []
         lengths = []
@@ -82,7 +82,6 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
                 phoneme = phoneme.split(" ")
                 phoneme_ids = cleaned_text_to_sequence(phoneme)
             except Exception:
-                print(f"{audiopath} not in self.phoneme_data !")
                 skipped_phone += 1
                 continue
 
@@ -101,8 +100,8 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
                 skipped_dur += 1
                 continue
 
-        print("skipped_phone: ", skipped_phone, ", skipped_dur: ", skipped_dur)
-        print("total left: ", len(audiopaths_sid_text_new))
+        # print("skipped_phone: ", skipped_phone, ", skipped_dur: ", skipped_dur)
+        # print("total left: ", len(audiopaths_sid_text_new))
         assert len(audiopaths_sid_text_new) > 1  # 至少能凑够batch size，这里todo
         self.audiopaths_sid_text = audiopaths_sid_text_new
         self.lengths = lengths

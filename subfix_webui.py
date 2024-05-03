@@ -339,7 +339,7 @@ if __name__ == "__main__":
         args.g_batch,
     )
 
-    with gr.Blocks() as demo:
+    with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
 
         with gr.Row():
             btn_change_index = gr.Button("Change Index")
@@ -398,8 +398,6 @@ if __name__ == "__main__":
             interval_slider = gr.Slider(
                 minimum=0, maximum=2, value=0, step=0.01, label="Interval", scale=3
             )
-            btn_theme_dark = gr.Button("Light Theme", link="?__theme=light", scale=1)
-            btn_theme_light = gr.Button("Dark Theme", link="?__theme=dark", scale=1)
 
         btn_change_index.click(
             b_change_index,
@@ -460,7 +458,7 @@ if __name__ == "__main__":
 
         btn_save_json.click(b_save_file)
 
-        demo.load(
+        app.load(
             b_change_index,
             inputs=[
                 index_slider,
@@ -469,8 +467,7 @@ if __name__ == "__main__":
             outputs=[*g_text_list, *g_audio_list, *g_checkbox_list],
         )
 
-    demo.launch(
-        server_name="0.0.0.0",
+    app.launch(
         inbrowser=True,
         quiet=True,
         share=eval(args.is_share),

@@ -106,8 +106,6 @@ def replace_phs(phs):
             phs_new.append(ph)
         elif ph in rep_map.keys():
             phs_new.append(rep_map[ph])
-        else:
-            print("ph not in symbols: ", ph)
     return phs_new
 
 

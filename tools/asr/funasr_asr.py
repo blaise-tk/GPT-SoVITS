@@ -66,7 +66,7 @@ def execute_asr(input_folder, output_folder, model_size, language):
 
     with open(output_file_path, "w", encoding="utf-8") as f:
         f.write("\n".join(output))
-        print(f"ASR 任务完成->标注文件路径: {output_file_path}\n")
+        print(f".list file successfully generated in {output_file_path}\n")
     return output_file_path
 
 

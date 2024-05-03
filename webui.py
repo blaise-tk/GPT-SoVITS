@@ -15,7 +15,6 @@ import LangSegment
 import numpy as np
 import gradio as gr
 
-
 from AR.models.t2s_lightning_module import Text2SemanticLightningModule
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 from module.mel_processing import spectrogram_torch
@@ -291,7 +290,6 @@ def change_gpt_weights(gpt_path):
     t2s_model = t2s_model.to(device)
     t2s_model.eval()
     total = sum([param.nelement() for param in t2s_model.parameters()])
-    print("Number of parameter: %.2fM" % (total / 1e6))
     with open("./logs/gweight.txt", "w", encoding="utf-8") as f:
         f.write(gpt_path)
 
@@ -465,12 +463,10 @@ def get_tts_wav(
         prompt_text = prompt_text.strip("\n")
         if prompt_text[-1] not in splits:
             prompt_text += "。" if prompt_language != "en" else "."
-        print(i18n("实际输入的参考文本:"), prompt_text)
     text = text.strip("\n")
     if text[0] not in splits and len(get_first(text)) < 4:
         text = "。" + text if text_language != "en" else "." + text
 
-    print(i18n("实际输入的目标文本:"), text)
     zero_wav = np.zeros(
         int(hps.data.sampling_rate * 0.3),
         dtype=np.float16 if is_half == True else np.float32,
@@ -478,7 +474,7 @@ def get_tts_wav(
     with torch.no_grad():
         wav16k, sr = librosa.load(ref_wav_path, sr=16000)
         if wav16k.shape[0] > 160000 or wav16k.shape[0] < 48000:
-            raise OSError(i18n("参考音频在3~10秒范围外，请更换！"))
+            raise OSError(i18n(" The reference audio is outside the range of 3 to 10 seconds"))
         wav16k = torch.from_numpy(wav16k)
         zero_wav_torch = torch.from_numpy(zero_wav)
         if is_half == True:
@@ -520,9 +516,7 @@ def get_tts_wav(
             continue
         if text[-1] not in splits:
             text += "。" if text_language != "en" else "."
-        print(i18n("实际输入的目标文本(每句):"), text)
         phones2, bert2, norm_text2 = get_phones_and_bert(text, text_language)
-        print(i18n("前端处理后的文本(每句):"), norm_text2)
         if not ref_free:
             bert = torch.cat([bert1, bert2], 1)
             all_phoneme_ids = (
@@ -681,14 +675,14 @@ os.makedirs(GPT_weight_root, exist_ok=True)
 
 
 def get_weights_names():
-    SoVITS_names = [pretrained_sovits_name]
+    SoVITS_names = [os.path.join(SoVITS_weight_root, pretrained_sovits_name)]
     for name in os.listdir(SoVITS_weight_root):
         if name.endswith(".pth"):
-            SoVITS_names.append("%s/%s" % (SoVITS_weight_root, name))
-    GPT_names = [pretrained_gpt_name]
+            SoVITS_names.append(os.path.join(SoVITS_weight_root, name))
+    GPT_names = [os.path.join(GPT_weight_root, pretrained_gpt_name)]
     for name in os.listdir(GPT_weight_root):
         if name.endswith(".ckpt"):
-            GPT_names.append("%s/%s" % (GPT_weight_root, name))
+            GPT_names.append(os.path.join(GPT_weight_root, name))
     return SoVITS_names, GPT_names
 
 
@@ -797,7 +791,10 @@ def open_asr(asr_inp_dir, asr_opt_dir, asr_model, asr_model_size, asr_lang):
         cmd += f" -l {asr_lang}"
         cmd += " -p %s" % ("float16" if is_half == True else "float32")
 
-        yield "ASR任务开启：%s" % cmd, {"__type__": "update", "visible": False}, {
+        yield "In progress...", {
+            "__type__": "update",
+            "visible": False,
+        }, {
             "__type__": "update",
             "visible": True,
         }
@@ -805,15 +802,18 @@ def open_asr(asr_inp_dir, asr_opt_dir, asr_model, asr_model_size, asr_lang):
         p_asr = Popen(cmd, shell=True)
         p_asr.wait()
         p_asr = None
-        yield f"ASR任务完成, 查看终端进行下一步", {
+        yield f"Successfully completed", {
             "__type__": "update",
             "visible": True,
         }, {"__type__": "update", "visible": False}
     else:
-        yield "已有正在进行的ASR任务，需先终止才能开启下一次任务", {
+        yield "There is already an ongoing ASR mission that needs to be terminated before the next mission can be opened", {
             "__type__": "update",
             "visible": False,
-        }, {"__type__": "update", "visible": True}
+        }, {
+            "__type__": "update",
+            "visible": True,
+        }
 
 
 def close_asr():
@@ -918,11 +918,11 @@ def open1Ba(
         with open(tmp_config_path, "w") as f:
             f.write(json.dumps(data))
 
-        cmd = '"%s" GPT_SoVITS/s2_train.py --config "%s"' % (
+        cmd = '"%s" GPT_SoVITS/sovits_train.py --config "%s"' % (
             python_exec,
             tmp_config_path,
         )
-        yield "SoVITS training starts:%s" % cmd, {
+        yield "In progress...", {
             "__type__": "update",
             "visible": False,
         }, {
@@ -933,7 +933,7 @@ def open1Ba(
         p_train_SoVITS = Popen(cmd, shell=True)
         p_train_SoVITS.wait()
         p_train_SoVITS = None
-        yield "SoVITS training completed", {"__type__": "update", "visible": True}, {
+        yield "Successfully completed", {"__type__": "update", "visible": True}, {
             "__type__": "update",
             "visible": False,
         }
@@ -1001,11 +1001,11 @@ def open1Bb(
         tmp_config_path = "%s/tmp_s1.yaml" % tmp
         with open(tmp_config_path, "w") as f:
             f.write(yaml.dump(data, default_flow_style=False))
-        cmd = '"%s" GPT_SoVITS/s1_train.py --config_file "%s" ' % (
+        cmd = '"%s" GPT_SoVITS/gpt_train.py --config_file "%s" ' % (
             python_exec,
             tmp_config_path,
         )
-        yield "GPT training starts: %s" % cmd, {
+        yield "In progress...", {
             "__type__": "update",
             "visible": False,
         }, {
@@ -1016,7 +1016,7 @@ def open1Bb(
         p_train_GPT = Popen(cmd, shell=True)
         p_train_GPT.wait()
         p_train_GPT = None
-        yield "GPT training completed", {"__type__": "update", "visible": True}, {
+        yield "Successfully completed", {"__type__": "update", "visible": True}, {
             "__type__": "update",
             "visible": False,
         }
@@ -1168,7 +1168,7 @@ def open1a(inp_text, inp_wav_dir, exp_name, gpu_numbers, bert_pretrained_dir):
 
             p = Popen(cmd, shell=True)
             ps1a.append(p)
-        yield "Text process in progress", {"__type__": "update", "visible": False}, {
+        yield "In progress...", {"__type__": "update", "visible": False}, {
             "__type__": "update",
             "visible": True,
         }
@@ -1184,7 +1184,7 @@ def open1a(inp_text, inp_wav_dir, exp_name, gpu_numbers, bert_pretrained_dir):
         with open(path_text, "w", encoding="utf8") as f:
             f.write("\n".join(opt) + "\n")
         ps1a = []
-        yield "End of the text process", {"__type__": "update", "visible": True}, {
+        yield "Successfully completed", {"__type__": "update", "visible": True}, {
             "__type__": "update",
             "visible": False,
         }
@@ -1247,7 +1247,7 @@ def open1b(inp_text, inp_wav_dir, exp_name, gpu_numbers, ssl_pretrained_dir):
 
             p = Popen(cmd, shell=True)
             ps1b.append(p)
-        yield "SSL extraction process in progress", {
+        yield "In progress...", {
             "__type__": "update",
             "visible": False,
         }, {
@@ -1257,7 +1257,7 @@ def open1b(inp_text, inp_wav_dir, exp_name, gpu_numbers, ssl_pretrained_dir):
         for p in ps1b:
             p.wait()
         ps1b = []
-        yield "End of SSL extraction process", {
+        yield "Successfully completed", {
             "__type__": "update",
             "visible": True,
         }, {
@@ -1321,7 +1321,7 @@ def open1c(inp_text, exp_name, gpu_numbers, pretrained_s2G_path):
 
             p = Popen(cmd, shell=True)
             ps1c.append(p)
-        yield "Semantic token extraction process in execution", {
+        yield "In progress...", {
             "__type__": "update",
             "visible": False,
         }, {
@@ -1340,7 +1340,7 @@ def open1c(inp_text, exp_name, gpu_numbers, pretrained_s2G_path):
         with open(path_semantic, "w", encoding="utf8") as f:
             f.write("\n".join(opt) + "\n")
         ps1c = []
-        yield "End of semantic token extraction process", {
+        yield "Successfully completed", {
             "__type__": "update",
             "visible": True,
         }, {
@@ -1534,7 +1534,7 @@ def open1abc(
                     "visible": True,
                 }
             ps1abc = []
-            yield "One-click triple process termination", {
+            yield "Successfully completed", {
                 "__type__": "update",
                 "visible": True,
             }, {
@@ -1544,7 +1544,7 @@ def open1abc(
         except:
             traceback.print_exc()
             close1abc()
-            yield "Error in the middle of a one-touch process", {
+            yield "Error", {
                 "__type__": "update",
                 "visible": True,
             }, {
@@ -1583,60 +1583,64 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
     with gr.Tabs():
         with gr.TabItem(i18n("Data Processor")):
             with gr.Accordion(i18n("Audio Splicer")):
-                with gr.Column():
-                    with gr.Row():
-                        slice_inp_path = gr.Textbox(
-                            label=i18n("Input root"),
-                            placeholder=i18n("Folder or audio path"),
-                        )
-                        slice_opt_root = gr.Textbox(
-                            label=i18n("Output root"),
-                            value="logs/output/slicer_opt",
-                        )
-                        threshold = gr.Textbox(
-                            label=i18n("Threshold"),
-                            value="-34",
-                        )
-                        min_length = gr.Textbox(
-                            label=i18n("Min Length"),
-                            value="4000",
-                        )
-                        min_interval = gr.Textbox(
-                            label=i18n("Minimum cutting interval"), value="300"
-                        )
-                        hop_size = gr.Textbox(
-                            label=i18n("Hop Size"),
-                            value="10",
-                        )
-                        max_sil_kept = gr.Textbox(
-                            label=i18n("Max Sil"),
-                            value="500",
-                        )
-                    with gr.Row():
-                        _max = gr.Slider(
-                            minimum=0,
-                            maximum=1,
-                            step=0.05,
-                            label=i18n("Maximum value after normalization"),
-                            value=0.9,
-                            interactive=True,
-                        )
-                        alpha = gr.Slider(
-                            minimum=0,
-                            maximum=1,
-                            step=0.05,
-                            label=i18n("Proportion of normalized audio to be mixed in"),
-                            value=0.25,
-                            interactive=True,
-                        )
-                        n_process = gr.Slider(
-                            minimum=1,
-                            maximum=n_cpu,
-                            step=1,
-                            label=i18n("Number of processes used for cutting"),
-                            value=4,
-                            interactive=True,
-                        )
+                with gr.Row():
+                    slice_inp_path = gr.Textbox(
+                        label=i18n("Input root"),
+                        placeholder=i18n("Folder or audio path"),
+                    )
+                    slice_opt_root = gr.Textbox(
+                        label=i18n("Output root"),
+                        value="logs/output/slicer_opt",
+                    )
+                with gr.Accordion(i18n("Advanced Settings"), open=False):
+                    with gr.Column():
+                        with gr.Row():
+                            threshold = gr.Textbox(
+                                label=i18n("Threshold"),
+                                value="-34",
+                            )
+                            min_length = gr.Textbox(
+                                label=i18n("Min Length"),
+                                value="4000",
+                            )
+                            min_interval = gr.Textbox(
+                                label=i18n("Minimum cutting interval"), value="300"
+                            )
+                            hop_size = gr.Textbox(
+                                label=i18n("Hop Size"),
+                                value="10",
+                            )
+                            max_sil_kept = gr.Textbox(
+                                label=i18n("Max Sil"),
+                                value="500",
+                            )
+                        with gr.Row():
+                            _max = gr.Slider(
+                                minimum=0,
+                                maximum=1,
+                                step=0.05,
+                                label=i18n("Maximum value after normalization"),
+                                value=0.9,
+                                interactive=True,
+                            )
+                            alpha = gr.Slider(
+                                minimum=0,
+                                maximum=1,
+                                step=0.05,
+                                label=i18n(
+                                    "Proportion of normalized audio to be mixed in"
+                                ),
+                                value=0.25,
+                                interactive=True,
+                            )
+                            n_process = gr.Slider(
+                                minimum=1,
+                                maximum=n_cpu,
+                                step=1,
+                                label=i18n("Number of processes used for cutting"),
+                                value=4,
+                                interactive=True,
+                            )
                 with gr.Column():
                     open_slicer_button = gr.Button(
                         i18n("Run Slicer"), variant="primary", visible=True
@@ -1720,15 +1724,15 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
             with gr.Accordion(
                 i18n("Optional: Manual text labelling reviewer"), open=False
             ):
-                with gr.Row():
-                    if_label = gr.Checkbox(
-                        label=i18n("Whether to enable marking WebUI"), show_label=True
-                    )
-                    path_list = gr.Textbox(
-                        label=i18n("Root to the list labeled file"),
-                        value=os.path.join("list_name.list"),
-                        interactive=True,
-                    )
+                if_label = gr.Checkbox(
+                    label=i18n("Launch Manual text labelling reviewer WebUI"),
+                    show_label=True,
+                )
+                path_list = gr.Textbox(
+                    label=i18n("Root to the list labeled file"),
+                    value=os.path.join("list_name.list"),
+                    interactive=True,
+                )
 
                 label_info = gr.Textbox(label=i18n("Output Information"))
             if_label.change(change_label, [if_label, path_list], [label_info])
@@ -1828,14 +1832,13 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
                         value="GPT_SoVITS/pretrained_models/chinese-hubert-base",
                         interactive=False,
                     )
-                with gr.Accordion(i18n("One-click formatting")):
                     button1abc_open = gr.Button(
-                        i18n("Run One-click formatting"),
+                        i18n("Run formatter"),
                         variant="primary",
                         visible=True,
                     )
                     button1abc_close = gr.Button(
-                        i18n("Stop One-click formatting"),
+                        i18n("Stop formatter"),
                         variant="primary",
                         visible=False,
                     )
@@ -1949,7 +1952,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
                             maximum=50,
                             step=1,
                             label=i18n("Total epoch"),
-                            value=15,
+                            value=10,
                             interactive=True,
                         )
 
@@ -2036,15 +2039,17 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
         with gr.TabItem(i18n("TTS Inference")):
             with gr.Accordion(i18n("Model Selector")):
                 with gr.Row():
+                    full_gpt_path = [os.path.join(GPT_weight_root, name) for name in GPT_names]
                     GPT_dropdown = gr.Dropdown(
                         label=i18n("GPT Model"),
-                        choices=sorted(GPT_names, key=custom_sort_key),
+                        choices=sorted(full_gpt_path, key=custom_sort_key),
                         value=gpt_path,
                         interactive=True,
                     )
+                    full_sovits_path = [os.path.join(SoVITS_weight_root, name) for name in SoVITS_names]
                     SoVITS_dropdown = gr.Dropdown(
                         label=i18n("SoVITS Model"),
-                        choices=sorted(SoVITS_names, key=custom_sort_key),
+                        choices=sorted(full_sovits_path, key=custom_sort_key),
                         value=sovits_path,
                         interactive=True,
                     )
@@ -2174,7 +2179,6 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
             )
 
     app.queue(concurrency_count=511, max_size=1022).launch(
-        server_name="0.0.0.0",
         inbrowser=True,
         share=is_share,
         server_port=webui_port_main,

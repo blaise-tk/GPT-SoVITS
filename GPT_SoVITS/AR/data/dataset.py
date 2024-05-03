@@ -115,9 +115,9 @@ class Text2SemanticDataset(Dataset):
     def init_batch(self):
         semantic_data_len = len(self.semantic_data)
         phoneme_data_len = len(self.phoneme_data.keys())
-        print("semantic_data_len:", semantic_data_len)
-        print("phoneme_data_len:", phoneme_data_len)
-        print(self.semantic_data)
+        # print("semantic_data_len:", semantic_data_len)
+        #print("phoneme_data_len:", phoneme_data_len)
+        #print(self.semantic_data)
         idx = 0
         num_not_in = 0
         num_deleted_bigger = 0
@@ -138,47 +138,40 @@ class Text2SemanticDataset(Dataset):
             semantic_str = self.semantic_data.iloc[i, 1]
             # get token list
             semantic_ids = [int(idx) for idx in semantic_str.split(" ")]
-            # (T), 是否需要变成 (1, T) -> 不需要，因为需要求 len
-            # 过滤掉太长的样本
+    
             if (
                 len(semantic_ids) > self.max_sec * self.hz
-            ):  #########1###根据token个数推测总时长过滤时长60s（config里）#40*25=1k
+            ):  
                 num_deleted_bigger += 1
                 continue
-            # (T, ), 这个速度不会很慢，所以可以在一开始就处理，无需在 __getitem__ 里面单个处理####
             phoneme = phoneme.split(" ")
 
             try:
                 phoneme_ids = cleaned_text_to_sequence(phoneme)
             except:
                 traceback.print_exc()
-                # print(f"{item_name} not in self.phoneme_data !")
                 num_not_in += 1
                 continue
-            # if len(phoneme_ids) >400:###########2：改为恒定限制为semantic/2.5就行
             if (
                 len(phoneme_ids) > self.max_sec * self.hz / 2.5
-            ):  ###########2：改为恒定限制为semantic/2.5就行
+            ): 
                 num_deleted_ps += 1
                 continue
-            # if len(semantic_ids) > 1000:###########3
-            #     num_deleted_bigger += 1
-            #     continue
+    
 
             ps_ratio = len(phoneme_ids) / (len(semantic_ids) / self.hz)
 
             if (
                 ps_ratio > self.max_ps_ratio or ps_ratio < self.min_ps_ratio
-            ):  ##########4#3~25#每秒多少个phone
+            ): 
                 num_deleted_ps += 1
-                # print(item_name)
                 continue
 
             self.semantic_phoneme.append((semantic_ids, phoneme_ids))
             idx += 1
             self.item_names.append(item_name)
 
-        min_num = 100  # 20直接不补#30补了也不存ckpt
+        min_num = 100  
         leng = len(self.semantic_phoneme)
         if leng < min_num:
             tmp1 = self.semantic_phoneme

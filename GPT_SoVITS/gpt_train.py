@@ -1,6 +1,4 @@
-# modified from https://github.com/feng-yufei/shared_debugging_code/blob/main/train_t2s.py
 import os
-import pdb
 
 if "_CUDA_VISIBLE_DEVICES" in os.environ:
     os.environ["CUDA_VISIBLE_DEVICES"] = os.environ["_CUDA_VISIBLE_DEVICES"]
@@ -28,7 +26,7 @@ from time import time as ttime
 import shutil
 
 
-def my_save(fea, path):  #####fix issue: torch.save doesn't support chinese path
+def my_save(fea, path): # fix issue: torch.save doesn't support chinese path
     dir = os.path.dirname(path)
     name = os.path.basename(path)
     tmp_path = "%s.pth" % (ttime())
@@ -63,7 +61,7 @@ class my_model_ckpt(ModelCheckpoint):
             ):
                 if (
                     self.if_save_latest == True
-                ):  ####如果设置只保存最后一个ckpt，在保存下一个ckpt后要清理掉之前的所有ckpt
+                ): 
                     to_clean = list(os.listdir(self.dirpath))
                 self._save_topk_checkpoint(trainer, monitor_candidates)
                 if self.if_save_latest == True:
@@ -160,7 +158,6 @@ def main(args):
         ckpt_path = ckpt_dir / newest_ckpt_name
     except Exception:
         ckpt_path = None
-    print("ckpt_path:", ckpt_path)
     trainer.fit(model, data_module, ckpt_path=ckpt_path)
 
 

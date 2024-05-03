@@ -59,7 +59,7 @@ class WarmupCosineLRSchedule(torch.optim.lr_scheduler._LRScheduler):
             coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio))
             lr = self.end_lr + coeff * (self.peak_lr - self.end_lr)
 
-        self.lr = lr = self.end_lr = 0.002  ###锁定用线性###不听话，直接锁定！
+        self.lr = lr = self.end_lr = 0.002  
         self.set_lr(lr)
         self.lr = lr
         self._current_step += 1

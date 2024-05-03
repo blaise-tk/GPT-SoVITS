@@ -58,8 +58,7 @@ def load_checkpoint(checkpoint_path, model, optimizer=None, skip_optimizer=False
         model.module.load_state_dict(new_state_dict)
     else:
         model.load_state_dict(new_state_dict)
-    print("load ")
-    logger.info(
+    print(
         "Loaded checkpoint '{}' (iteration {})".format(checkpoint_path, iteration)
     )
     return model, optimizer, learning_rate, iteration
@@ -69,7 +68,7 @@ from time import time as ttime
 import shutil
 
 
-def my_save(fea, path):  #####fix issue: torch.save doesn't support chinese path
+def my_save(fea, path):  # #fix issue: torch.save doesn't support chinese path
     dir = os.path.dirname(path)
     name = os.path.basename(path)
     tmp_path = "%s.pth" % (ttime())
@@ -78,7 +77,7 @@ def my_save(fea, path):  #####fix issue: torch.save doesn't support chinese path
 
 
 def save_checkpoint(model, optimizer, learning_rate, iteration, checkpoint_path):
-    logger.info(
+    print(
         "Saving model and optimizer state at iteration {} to {}".format(
             iteration, checkpoint_path
         )
@@ -270,7 +269,7 @@ def clean_checkpoints(path_to_models="logs/44k/", n_ckpts_to_keep=2, sort_by_tim
         os.path.join(path_to_models, fn)
         for fn in (x_sorted("G")[:-n_ckpts_to_keep] + x_sorted("D")[:-n_ckpts_to_keep])
     ]
-    del_info = lambda fn: logger.info(f".. Free up space by deleting ckpt {fn}")
+    del_info = lambda fn: print(f"Free up space by deleting ckpt {fn}")
     del_routine = lambda x: [os.remove(x), del_info(x)]
     rs = [del_routine(fn) for fn in to_del]
 
@@ -298,7 +297,7 @@ def get_hparams_from_file(config_path):
 def check_git_hash(model_dir):
     source_dir = os.path.dirname(os.path.realpath(__file__))
     if not os.path.exists(os.path.join(source_dir, ".git")):
-        logger.warn(
+        print(
             "{} is not a git repository, therefore hash value comparison will be ignored.".format(
                 source_dir
             )
@@ -311,7 +310,7 @@ def check_git_hash(model_dir):
     if os.path.exists(path):
         saved_hash = open(path).read()
         if saved_hash != cur_hash:
-            logger.warn(
+            print(
                 "git hash values are different. {}(saved) != {}(current)".format(
                     saved_hash[:8], cur_hash[:8]
                 )
