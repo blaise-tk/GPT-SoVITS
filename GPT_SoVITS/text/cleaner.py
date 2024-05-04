@@ -54,5 +54,4 @@ def text_to_sequence(text, language):
     return cleaned_text_to_sequence(phones)
 
 
-if __name__ == "__main__":
-    print(clean_text("你好%啊啊啊额、还是到付红四方。", "zh"))
+

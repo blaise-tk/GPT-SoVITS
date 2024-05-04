@@ -2,9 +2,6 @@ import os
 
 
 def check_fw_local_models():
-    """
-    启动时检查本地是否有 Faster Whisper 模型.
-    """
     model_size_list = [
         "tiny",
         "tiny.en",

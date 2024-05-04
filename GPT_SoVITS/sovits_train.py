@@ -69,8 +69,6 @@ def run(rank, n_gpus, hps):
     global global_step
     if rank == 0:
         logger = utils.get_logger(hps.data.exp_dir)
-        # logger.info(hps)
-        # utils.check_git_hash(hps.s2_ckpt_dir)
         writer = SummaryWriter(log_dir=hps.s2_ckpt_dir)
         writer_eval = SummaryWriter(log_dir=os.path.join(hps.s2_ckpt_dir, "eval"))
 
@@ -84,7 +82,7 @@ def run(rank, n_gpus, hps):
     if torch.cuda.is_available():
         torch.cuda.set_device(rank)
 
-    train_dataset = TextAudioSpeakerLoader(hps.data) 
+    train_dataset = TextAudioSpeakerLoader(hps.data)
     train_sampler = DistributedBucketSampler(
         train_dataset,
         hps.train.batch_size,
@@ -123,11 +121,6 @@ def run(rank, n_gpus, hps):
         persistent_workers=True,
         prefetch_factor=16,
     )
-    # if rank == 0:
-    #     eval_dataset = TextAudioSpeakerLoader(hps.data.validation_files, hps.data, val=True)
-    #     eval_loader = DataLoader(eval_dataset, num_workers=0, shuffle=False,
-    #                              batch_size=1, pin_memory=True,
-    #                              drop_last=False, collate_fn=collate_fn)
 
     net_g = (
         SynthesizerTrn(
@@ -162,12 +155,7 @@ def run(rank, n_gpus, hps):
         net_g.parameters(),
     )
 
-    # te_p=net_g.enc_p.text_embedding.parameters()
-    # et_p=net_g.enc_p.encoder_text.parameters()
-    # mrte_p=net_g.enc_p.mrte.parameters()
-
     optim_g = torch.optim.AdamW(
-        # filter(lambda p: p.requires_grad, net_g.parameters()),###默认所有层lr一致
         [
             {"params": base_params, "lr": hps.train.learning_rate},
             {
@@ -230,7 +218,7 @@ def run(rank, n_gpus, hps):
                     torch.load(hps.train.pretrained_s2G, map_location="cpu")["weight"],
                     strict=False,
                 )
-            )  ##测试不加载优化器
+            )
         if hps.train.pretrained_s2D != "":
             if rank == 0:
                 print("Loaded pretrained %s" % hps.train.pretrained_s2D)
@@ -329,7 +317,6 @@ def train_and_evaluate(
             y, y_lengths = y.to(device), y_lengths.to(device)
             ssl = ssl.to(device)
             ssl.requires_grad = False
-            # ssl_lengths = ssl_lengths.cuda(rank, non_blocking=True)
             text, text_lengths = text.to(device), text_lengths.to(device)
 
         with autocast(enabled=hps.train.fp16_run):
@@ -404,8 +391,6 @@ def train_and_evaluate(
             if global_step % hps.train.log_interval == 0:
                 lr = optim_g.param_groups[0]["lr"]
                 losses = [loss_disc, loss_gen, loss_fm, loss_mel, kl_ssl, loss_kl]
-                # print( "Train Epoch: {} [{:.0f}%]".format(epoch, 100.0 * batch_idx / len(train_loader)))
-                # print([x.item() for x in losses] + [global_step, lr])
 
                 scalar_dict = {
                     "loss/g/total": loss_gen_all,
@@ -423,9 +408,6 @@ def train_and_evaluate(
                     }
                 )
 
-                # scalar_dict.update({"loss/g/{}".format(i): v for i, v in enumerate(losses_gen)})
-                # scalar_dict.update({"loss/d_r/{}".format(i): v for i, v in enumerate(losses_disc_r)})
-                # scalar_dict.update({"loss/d_g/{}".format(i): v for i, v in enumerate(losses_disc_g)})
                 image_dict = {
                     "slice/mel_org": utils.plot_spectrogram_to_numpy(
                         y_mel[0].data.cpu().numpy()

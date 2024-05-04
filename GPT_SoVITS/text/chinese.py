@@ -159,16 +159,3 @@ def text_normalize(text):
     for sentence in sentences:
         dest_text += replace_punctuation(sentence)
     return dest_text
-
-
-if __name__ == "__main__":
-    text = "啊——但是《原神》是由,米哈\游自主，研发的一款全.新开放世界.冒险游戏"
-    text = "呣呣呣～就是…大人的鼹鼠党吧？"
-    text = "你好"
-    text = text_normalize(text)
-    print(g2p(text))
-
-
-# # 示例用法
-# text = "这是一个示例文本：,你好！这是一个测试..."
-# print(g2p_paddle(text))  # 输出: 这是一个示例文本你好这是一个测试

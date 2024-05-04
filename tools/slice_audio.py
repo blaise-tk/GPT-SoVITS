@@ -49,7 +49,6 @@ def slice(
                 wavfile.write(
                     "%s/%s_%010d_%010d.wav" % (opt_root, name, start, end),
                     32000,
-                    # chunk.astype(np.float32),
                     (chunk * 32767).astype(np.int16),
                 )
         except:

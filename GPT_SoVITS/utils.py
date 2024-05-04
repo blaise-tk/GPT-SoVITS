@@ -68,7 +68,7 @@ from time import time as ttime
 import shutil
 
 
-def my_save(fea, path):  # #fix issue: torch.save doesn't support chinese path
+def my_save(fea, path):  # fix issue: torch.save doesn't support chinese path
     dir = os.path.dirname(path)
     name = os.path.basename(path)
     tmp_path = "%s.pth" % (ttime())
@@ -213,9 +213,6 @@ def get_hparams(init=True, stage=1):
         default=None,
         help="resume step",
     )
-    # parser.add_argument('-e', '--exp_dir', type=str, required=False,default=None,help='experiment directory')
-    # parser.add_argument('-g', '--pretrained_s2G', type=str, required=False,default=None,help='pretrained sovits gererator weights')
-    # parser.add_argument('-d', '--pretrained_s2D', type=str, required=False,default=None,help='pretrained sovits discriminator weights')
 
     args = parser.parse_args()
 
@@ -365,10 +362,3 @@ class HParams:
     def __repr__(self):
         return self.__dict__.__repr__()
 
-
-if __name__ == "__main__":
-    print(
-        load_wav_to_torch(
-            "/home/fish/wenetspeech/dataset_vq/Y0000022499_wHFSeHEx9CM/S00261.flac"
-        )
-    )

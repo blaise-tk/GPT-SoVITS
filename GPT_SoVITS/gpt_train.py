@@ -10,7 +10,7 @@ import torch, platform
 from pytorch_lightning import seed_everything
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers import TensorBoardLogger  # WandbLogger
+from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.strategies import DDPStrategy
 from AR.data.data_module import Text2SemanticDataModule
 from AR.models.t2s_lightning_module import Text2SemanticLightningModule
@@ -52,7 +52,6 @@ class my_model_ckpt(ModelCheckpoint):
         self.config = config
 
     def on_train_epoch_end(self, trainer, pl_module):
-        # if not self._should_skip_saving_checkpoint(trainer) and self._should_save_on_train_epoch_end(trainer):
         if self._should_save_on_train_epoch_end(trainer):
             monitor_candidates = self._monitor_candidates(trainer)
             if (
@@ -119,8 +118,6 @@ def main(args):
     trainer: Trainer = Trainer(
         max_epochs=config["train"]["epochs"],
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
-        # val_check_interval=9999999999999999999999,###不要验证
-        # check_val_every_n_epoch=None,
         limit_val_batches=0,
         devices=-1 if torch.cuda.is_available() else 1,
         benchmark=False,
@@ -148,12 +145,9 @@ def main(args):
         config,
         train_semantic_path=config["train_semantic_path"],
         train_phoneme_path=config["train_phoneme_path"],
-        # dev_semantic_path=args.dev_semantic_path,
-        # dev_phoneme_path=args.dev_phoneme_path
     )
 
     try:
-        # 使用正则表达式匹配文件名中的数字部分，并按数字大小进行排序
         newest_ckpt_name = get_newest_ckpt(os.listdir(ckpt_dir))
         ckpt_path = ckpt_dir / newest_ckpt_name
     except Exception:
@@ -161,7 +155,6 @@ def main(args):
     trainer.fit(model, data_module, ckpt_path=ckpt_path)
 
 
-# srun --gpus-per-node=1 --ntasks-per-node=1 python train.py --path-to-configuration configurations/default.yaml
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -171,15 +164,5 @@ if __name__ == "__main__":
         default="configs/s1longer.yaml",
         help="path of config file",
     )
-    # args for dataset
-    # parser.add_argument('--train_semantic_path',type=str,default='/data/docker/liujing04/gpt-vits/fine_tune_dataset/xuangou/6-name2semantic.tsv')
-    # parser.add_argument('--train_phoneme_path', type=str, default='/data/docker/liujing04/gpt-vits/fine_tune_dataset/xuangou/2-name2text.txt')
-
-    # parser.add_argument('--dev_semantic_path', type=str, default='dump_mix/semantic_dev.tsv')
-    # parser.add_argument('--dev_phoneme_path', type=str, default='dump_mix/phoneme_dev.npy')
-    # parser.add_argument('--output_dir',type=str,default='/data/docker/liujing04/gpt-vits/fine_tune_dataset/xuangou/logs_s1',help='directory to save the results')
-    # parser.add_argument('--output_dir',type=str,default='/liujing04/gpt_logs/s1/xuangou_ft',help='directory to save the results')
-
     args = parser.parse_args()
-    logging.info(str(args))
     main(args)

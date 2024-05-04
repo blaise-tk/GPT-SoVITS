@@ -190,6 +190,3 @@ def g2p(norm_text, with_prosody=False):
     return phones
 
 
-if __name__ == "__main__":
-    phones = g2p("こんにちは, hello, AKITOです,よろしくお願いしますね！")
-    print(phones)

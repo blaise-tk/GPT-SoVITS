@@ -123,8 +123,8 @@ def execute_asr(input_folder, output_folder, model_size, language, precision):
     else:
         model_path = model_size
     if language == "auto":
-        language = None  # 不设置语种由模型自动输出概率最高的语种
-    print("Whisper - Loading model:", model_size)
+        language = None 
+    print("Loading model:", model_size)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     try:
         model = WhisperModel(model_path, device=device, compute_type=precision)
@@ -150,11 +150,11 @@ def execute_asr(input_folder, output_folder, model_size, language, precision):
             text = ""
 
             if info.language == "zh":
-                print("检测为中文文本, 转 FunASR 处理")
+                print("Detected as Chinese text, converted to FunASR processing")
                 if "only_asr" not in globals():
                     from tools.asr.funasr_asr import (
                         only_asr,
-                    )  # #如果用英文就不需要导入下载模型
+                    ) 
                 text = only_asr(file_path)
 
             if text == "":

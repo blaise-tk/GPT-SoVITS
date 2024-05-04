@@ -22,10 +22,11 @@ from text import cleaned_text_to_sequence
 from module.models import SynthesizerTrn
 from feature_extractor import cnhubert
 from multiprocessing import cpu_count
+from tools.asr.config import asr_dict
 from text.cleaner import clean_text
 from time import time as ttime
 
-from tools import my_utils
+from GPT_SoVITS import my_utils
 from subprocess import Popen
 
 from config import (
@@ -474,7 +475,9 @@ def get_tts_wav(
     with torch.no_grad():
         wav16k, sr = librosa.load(ref_wav_path, sr=16000)
         if wav16k.shape[0] > 160000 or wav16k.shape[0] < 48000:
-            raise OSError(i18n(" The reference audio is outside the range of 3 to 10 seconds"))
+            raise OSError(
+                i18n(" The reference audio is outside the range of 3 to 10 seconds")
+            )
         wav16k = torch.from_numpy(wav16k)
         zero_wav_torch = torch.from_numpy(zero_wav)
         if is_half == True:
@@ -492,19 +495,18 @@ def get_tts_wav(
         prompt_semantic = codes[0, 0]
     t1 = ttime()
 
-    if how_to_cut == i18n("凑四句一切"):
+    if how_to_cut == i18n("Split into four lines"):
         text = cut1(text)
-    elif how_to_cut == i18n("凑50字一切"):
+    elif how_to_cut == i18n("Split every 50 characters"):
         text = cut2(text)
-    elif how_to_cut == i18n("按中文句号。切"):
+    elif how_to_cut == i18n("Split by Chinese punctuation marks"):
         text = cut3(text)
-    elif how_to_cut == i18n("按英文句号.切"):
+    elif how_to_cut == i18n("Split by English punctuation marks"):
         text = cut4(text)
-    elif how_to_cut == i18n("按标点符号切"):
+    elif how_to_cut == i18n("Split by punctuation marks"):
         text = cut5(text)
     while "\n\n" in text:
         text = text.replace("\n\n", "\n")
-    print(i18n("实际输入的目标文本(切句后):"), text)
     texts = text.split("\n")
     texts = merge_short_text_in_array(texts, 5)
     audio_opt = []
@@ -777,9 +779,6 @@ def change_label(if_label, path_list):
         yield i18n("Marking tool WebUI is disabled")
 
 
-from tools.asr.config import asr_dict
-
-
 def open_asr(asr_inp_dir, asr_opt_dir, asr_model, asr_model_size, asr_lang):
     global p_asr
     if p_asr == None:
@@ -802,12 +801,12 @@ def open_asr(asr_inp_dir, asr_opt_dir, asr_model, asr_model_size, asr_lang):
         p_asr = Popen(cmd, shell=True)
         p_asr.wait()
         p_asr = None
-        yield f"Successfully completed", {
+        yield f"Successfully completed!", {
             "__type__": "update",
             "visible": True,
         }, {"__type__": "update", "visible": False}
     else:
-        yield "There is already an ongoing ASR mission that needs to be terminated before the next mission can be opened", {
+        yield "There is already a task in progress.", {
             "__type__": "update",
             "visible": False,
         }, {
@@ -840,7 +839,7 @@ def open_denoise(denoise_inp_dir, denoise_opt_dir):
             "float16" if is_half == True else "float32",
         )
 
-        yield "Voice Noise Reduction task on: %s" % cmd, {
+        yield "In progress...", {
             "__type__": "update",
             "visible": False,
         }, {
@@ -851,12 +850,12 @@ def open_denoise(denoise_inp_dir, denoise_opt_dir):
         p_denoise = Popen(cmd, shell=True)
         p_denoise.wait()
         p_denoise = None
-        yield f"Voice Noise Reduction task completed, view terminal for next step", {
+        yield f"Successfully completed!", {
             "__type__": "update",
             "visible": True,
         }, {"__type__": "update", "visible": False}
     else:
-        yield "There is already a voice noise reduction task in progress that needs to be terminated before the next task can be started.", {
+        yield "There is already a task in progress.", {
             "__type__": "update",
             "visible": False,
         }, {
@@ -871,7 +870,7 @@ def close_denoise():
         kill_process(p_denoise.pid)
         p_denoise = None
     return (
-        "Speech noise reduction process has been terminated",
+        "All processes have been terminated.",
         {"__type__": "update", "visible": True},
         {"__type__": "update", "visible": False},
     )
@@ -933,12 +932,12 @@ def open1Ba(
         p_train_SoVITS = Popen(cmd, shell=True)
         p_train_SoVITS.wait()
         p_train_SoVITS = None
-        yield "Successfully completed", {"__type__": "update", "visible": True}, {
+        yield "Successfully completed!", {"__type__": "update", "visible": True}, {
             "__type__": "update",
             "visible": False,
         }
     else:
-        yield "There is already a SoVITS training task in progress that needs to be terminated before the next task can be started", {
+        yield "There is already a task in progress.", {
             "__type__": "update",
             "visible": False,
         }, {
@@ -953,7 +952,7 @@ def close1Ba():
         kill_process(p_train_SoVITS.pid)
         p_train_SoVITS = None
     return (
-        "SoVITS training has been terminated",
+        "All processes have been terminated.",
         {"__type__": "update", "visible": True},
         {"__type__": "update", "visible": False},
     )
@@ -1016,12 +1015,12 @@ def open1Bb(
         p_train_GPT = Popen(cmd, shell=True)
         p_train_GPT.wait()
         p_train_GPT = None
-        yield "Successfully completed", {"__type__": "update", "visible": True}, {
+        yield "Successfully completed!", {"__type__": "update", "visible": True}, {
             "__type__": "update",
             "visible": False,
         }
     else:
-        yield "There is already a GPT training task in progress that needs to be terminated before the next task can be started", {
+        yield "There is already a task in progress.", {
             "__type__": "update",
             "visible": False,
         }, {
@@ -1036,7 +1035,7 @@ def close1Bb():
         kill_process(p_train_GPT.pid)
         p_train_GPT = None
     return (
-        "GPT training has been terminated",
+        "All processes have been terminated.",
         {"__type__": "update", "visible": True},
         {"__type__": "update", "visible": False},
     )
@@ -1106,12 +1105,12 @@ def open_slice(
         for p in ps_slice:
             p.wait()
         ps_slice = []
-        yield "Successfully completed", {"__type__": "update", "visible": True}, {
+        yield "Successfully completed!", {"__type__": "update", "visible": True}, {
             "__type__": "update",
             "visible": False,
         }
     else:
-        yield "There is already a cutting task in progress that needs to be terminated before the next task can be started.", {
+        yield "There is already a task in progress.", {
             "__type__": "update",
             "visible": False,
         }, {
@@ -1130,7 +1129,7 @@ def close_slice():
                 traceback.print_exc()
         ps_slice = []
     return (
-        "All cutting processes have been terminated",
+        "All processes have been terminated.",
         {"__type__": "update", "visible": True},
         {"__type__": "update", "visible": False},
     )
@@ -1184,12 +1183,12 @@ def open1a(inp_text, inp_wav_dir, exp_name, gpu_numbers, bert_pretrained_dir):
         with open(path_text, "w", encoding="utf8") as f:
             f.write("\n".join(opt) + "\n")
         ps1a = []
-        yield "Successfully completed", {"__type__": "update", "visible": True}, {
+        yield "Successfully completed!", {"__type__": "update", "visible": True}, {
             "__type__": "update",
             "visible": False,
         }
     else:
-        yield "There is already a text task in progress that needs to be terminated before the next task can be started.", {
+        yield "There is already a task in progress.", {
             "__type__": "update",
             "visible": False,
         }, {
@@ -1208,7 +1207,7 @@ def close1a():
                 traceback.print_exc()
         ps1a = []
     return (
-        "All processes have been terminated",
+        "All processes have been terminated.",
         {"__type__": "update", "visible": True},
         {"__type__": "update", "visible": False},
     )
@@ -1257,7 +1256,7 @@ def open1b(inp_text, inp_wav_dir, exp_name, gpu_numbers, ssl_pretrained_dir):
         for p in ps1b:
             p.wait()
         ps1b = []
-        yield "Successfully completed", {
+        yield "Successfully completed!", {
             "__type__": "update",
             "visible": True,
         }, {
@@ -1265,7 +1264,7 @@ def open1b(inp_text, inp_wav_dir, exp_name, gpu_numbers, ssl_pretrained_dir):
             "visible": False,
         }
     else:
-        yield "There is already an SSL extraction task in progress that needs to be terminated before the next task can be started.", {
+        yield "There is already a task in progress.", {
             "__type__": "update",
             "visible": False,
         }, {
@@ -1284,7 +1283,7 @@ def close1b():
                 traceback.print_exc()
         ps1b = []
     return (
-        "All processes have been terminated",
+        "All processes have been terminated.",
         {"__type__": "update", "visible": True},
         {"__type__": "update", "visible": False},
     )
@@ -1340,7 +1339,7 @@ def open1c(inp_text, exp_name, gpu_numbers, pretrained_s2G_path):
         with open(path_semantic, "w", encoding="utf8") as f:
             f.write("\n".join(opt) + "\n")
         ps1c = []
-        yield "Successfully completed", {
+        yield "Successfully completed!", {
             "__type__": "update",
             "visible": True,
         }, {
@@ -1348,7 +1347,7 @@ def open1c(inp_text, exp_name, gpu_numbers, pretrained_s2G_path):
             "visible": False,
         }
     else:
-        yield "There is already a semantic token extraction task in progress that needs to be terminated before the next task can be started", {
+        yield "There is already a task in progress.", {
             "__type__": "update",
             "visible": False,
         }, {
@@ -1367,7 +1366,7 @@ def close1c():
                 traceback.print_exc()
         ps1c = []
     return (
-        "All semantic token processes have been terminated",
+        "All processes have been terminated.",
         {"__type__": "update", "visible": True},
         {"__type__": "update", "visible": False},
     )
@@ -1424,7 +1423,7 @@ def open1abc(
 
                     p = Popen(cmd, shell=True)
                     ps1abc.append(p)
-                yield "Progress: 1a-ing", {"__type__": "update", "visible": False}, {
+                yield "In progress...", {"__type__": "update", "visible": False}, {
                     "__type__": "update",
                     "visible": True,
                 }
@@ -1439,11 +1438,6 @@ def open1abc(
                     os.remove(txt_path)
                 with open(path_text, "w", encoding="utf8") as f:
                     f.write("\n".join(opt) + "\n")
-
-            yield "进度：1a-done", {"__type__": "update", "visible": False}, {
-                "__type__": "update",
-                "visible": True,
-            }
             ps1abc = []
             config = {
                 "inp_text": inp_text,
@@ -1470,13 +1464,7 @@ def open1abc(
 
                 p = Popen(cmd, shell=True)
                 ps1abc.append(p)
-            yield "Progress: 1a-done, 1b-ing", {
-                "__type__": "update",
-                "visible": False,
-            }, {
-                "__type__": "update",
-                "visible": True,
-            }
+
             for p in ps1abc:
                 p.wait()
             yield "Progress: 1a1b-done", {"__type__": "update", "visible": False}, {
@@ -1514,10 +1502,6 @@ def open1abc(
 
                     p = Popen(cmd, shell=True)
                     ps1abc.append(p)
-                yield "Progress: 1a1b-done, 1cing", {
-                    "__type__": "update",
-                    "visible": False,
-                }, {"__type__": "update", "visible": True}
                 for p in ps1abc:
                     p.wait()
 
@@ -1529,12 +1513,9 @@ def open1abc(
                     os.remove(semantic_path)
                 with open(path_semantic, "w", encoding="utf8") as f:
                     f.write("\n".join(opt) + "\n")
-                yield "Progress: all-done", {"__type__": "update", "visible": False}, {
-                    "__type__": "update",
-                    "visible": True,
-                }
+
             ps1abc = []
-            yield "Successfully completed", {
+            yield "Successfully completed!", {
                 "__type__": "update",
                 "visible": True,
             }, {
@@ -1552,7 +1533,7 @@ def open1abc(
                 "visible": False,
             }
     else:
-        yield "There is already a one-click trifecta task in progress that needs to be terminated before the next task can be started.", {
+        yield "There is already a task in progress.", {
             "__type__": "update",
             "visible": False,
         }, {
@@ -1571,7 +1552,7 @@ def close1abc():
                 traceback.print_exc()
         ps1abc = []
     return (
-        "已终止所有一键三连进程",
+        "All processes have been terminated.",
         {"__type__": "update", "visible": True},
         {"__type__": "update", "visible": False},
     )
@@ -1833,15 +1814,15 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
                         interactive=False,
                     )
                 button1abc_open = gr.Button(
-                        i18n("Run formatter"),
-                        variant="primary",
-                        visible=True,
-                    )
+                    i18n("Run formatter"),
+                    variant="primary",
+                    visible=True,
+                )
                 button1abc_close = gr.Button(
-                        i18n("Stop formatter"),
-                        variant="primary",
-                        visible=False,
-                    )
+                    i18n("Stop formatter"),
+                    variant="primary",
+                    visible=False,
+                )
                 info1abc = gr.Textbox(label=i18n("Output Information"))
 
             button1abc_open.click(
@@ -1863,11 +1844,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
                 close1abc, [], [info1abc, button1abc_open, button1abc_close]
             )
 
-            with gr.Accordion(
-                i18n(
-                    "SoVITS training"
-                )
-            ):
+            with gr.Accordion(i18n("SoVITS training")):
                 with gr.Column():
                     with gr.Row():
                         batch_size = gr.Slider(
@@ -1932,11 +1909,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
                         visible=False,
                     )
                     info1Ba = gr.Textbox(label=i18n("Output Information"))
-            with gr.Accordion(
-                i18n(
-                    "GPT Training"
-                )
-            ):
+            with gr.Accordion(i18n("GPT Training")):
                 with gr.Column():
                     with gr.Row():
                         batch_size1Bb = gr.Slider(
@@ -2039,14 +2012,18 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
         with gr.TabItem(i18n("TTS Inference")):
             with gr.Accordion(i18n("Model Selector")):
                 with gr.Row():
-                    full_gpt_path = [os.path.join(GPT_weight_root, name) for name in GPT_names]
+                    full_gpt_path = [
+                        os.path.join(GPT_weight_root, name) for name in GPT_names
+                    ]
                     GPT_dropdown = gr.Dropdown(
                         label=i18n("GPT Model"),
                         choices=sorted(full_gpt_path, key=custom_sort_key),
                         value=gpt_path,
                         interactive=True,
                     )
-                    full_sovits_path = [os.path.join(SoVITS_weight_root, name) for name in SoVITS_names]
+                    full_sovits_path = [
+                        os.path.join(SoVITS_weight_root, name) for name in SoVITS_names
+                    ]
                     SoVITS_dropdown = gr.Dropdown(
                         label=i18n("SoVITS Model"),
                         choices=sorted(full_sovits_path, key=custom_sort_key),
