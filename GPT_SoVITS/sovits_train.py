@@ -490,7 +490,7 @@ def train_and_evaluate(
 
     if rank == 0:
         losses = [loss_disc, loss_gen, loss_fm, loss_mel, kl_ssl, loss_kl]
-        print(f"Epoch: {epoch} {[x.item() for x in losses] + [global_step, lr]}")
+        print(f"Epoch: {epoch} {[x.item() for x in losses]}")
 
 
 def evaluate(hps, generator, eval_loader, writer_eval):

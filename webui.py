@@ -1466,10 +1466,6 @@ def open1abc(
 
             for p in ps1abc:
                 p.wait()
-            yield "Progress: 1a1b-done", {"__type__": "update", "visible": False}, {
-                "__type__": "update",
-                "visible": True,
-            }
             ps1abc = []
             path_semantic = "%s/6-name2semantic.tsv" % opt_dir
             if os.path.exists(path_semantic) == False or (
