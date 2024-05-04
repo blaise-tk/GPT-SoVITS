@@ -1875,7 +1875,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
                     with gr.Row():
                         if_save_latest = gr.Checkbox(
                             label=i18n(
-                                "Whether to save only the latest ckpt file to save hard disk space"
+                                "Save only the latest checkpoint"
                             ),
                             value=True,
                             interactive=True,
@@ -1883,7 +1883,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
                         )
                         if_save_every_weights = gr.Checkbox(
                             label=i18n(
-                                "Whether or not to save the final miniatures to the weights folder at each save time point"
+                                "Save final checkpoints at each save time point"
                             ),
                             value=True,
                             interactive=True,
@@ -1933,15 +1933,16 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
                     with gr.Row():
                         if_dpo = gr.Checkbox(
                             label=i18n(
-                                "Whether to turn on the dpo training option (experimental)"
+                                "Experimental: DPO Training"
                             ),
+                            info=i18n("DPO training significantly enhances the model's performance and stability, specifically in non-audio applications. It allows for processing larger text inputs without fragmentation and reduces the occurrence of errors such as word repetition or omission during inference."),
                             value=False,
                             interactive=True,
                             show_label=True,
                         )
                         if_save_latest1Bb = gr.Checkbox(
                             label=i18n(
-                                "Whether to save only the latest ckpt file to save hard disk space"
+                                "Save only the latest checkpoint"
                             ),
                             value=True,
                             interactive=True,
@@ -1949,7 +1950,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
                         )
                         if_save_every_weights1Bb = gr.Checkbox(
                             label=i18n(
-                                "Whether or not to save the final miniatures to the weights folder at each save time point"
+                                "Save final checkpoints at each save time point"
                             ),
                             value=True,
                             interactive=True,
@@ -2010,7 +2011,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
                     ]
                     GPT_dropdown = gr.Dropdown(
                         label=i18n("GPT Model"),
-                        choices=sorted(full_gpt_path, key=custom_sort_key),
+                        choices=full_gpt_path,
                         value=gpt_path,
                         interactive=True,
                     )
@@ -2019,7 +2020,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
                     ]
                     SoVITS_dropdown = gr.Dropdown(
                         label=i18n("SoVITS Model"),
-                        choices=sorted(full_sovits_path, key=custom_sort_key),
+                        choices=full_sovits_path,
                         value=sovits_path,
                         interactive=True,
                     )
