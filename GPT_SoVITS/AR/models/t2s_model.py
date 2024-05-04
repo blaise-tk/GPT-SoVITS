@@ -172,8 +172,6 @@ class Text2SemanticDecoder(nn.Module):
         x_len = x_lens.max()
         reject_logits = self.ar_predict_layer(reject_xy_dec[:, x_len:])
 
-
-
         loss_1 = F.cross_entropy(logits.permute(0, 2, 1), targets, reduction="sum")
         acc = self.ar_accuracy_metric(logits.permute(0, 2, 1).detach(), targets).item()
 
@@ -326,9 +324,9 @@ class Text2SemanticDecoder(nn.Module):
 
     def infer_panel(
         self,
-        x,  
+        x,
         x_lens,
-        prompts, 
+        prompts,
         bert_feature,
         top_k: int = -100,
         top_p: int = 100,
@@ -347,9 +345,9 @@ class Text2SemanticDecoder(nn.Module):
         stop = False
         cache = {
             "all_stage": self.num_layers,
-            "k": [None] * self.num_layers,  
+            "k": [None] * self.num_layers,
             "v": [None] * self.num_layers,
-            "y_emb": None,  
+            "y_emb": None,
             "first_infer": 1,
             "stage": 0,
         }
@@ -372,10 +370,10 @@ class Text2SemanticDecoder(nn.Module):
 
         x_attn_mask_pad = F.pad(
             x_attn_mask,
-            (0, y_len), 
+            (0, y_len),
             value=True,
         )
-        y_attn_mask = F.pad(  
+        y_attn_mask = F.pad(
             torch.triu(torch.ones(y_len, y_len, dtype=torch.bool), diagonal=1),
             (x_len, 0),
             value=False,
@@ -385,11 +383,9 @@ class Text2SemanticDecoder(nn.Module):
         for idx in tqdm(range(1500)):
 
             xy_dec, _ = self.h((xy_pos, None), mask=xy_attn_mask, cache=cache)
-            logits = self.ar_predict_layer(
-                xy_dec[:, -1]
-            )  
-            if idx == 0: 
-                logits = logits[:, :-1]  
+            logits = self.ar_predict_layer(xy_dec[:, -1])
+            if idx == 0:
+                logits = logits[:, :-1]
             samples = sample(
                 logits[0],
                 y,
@@ -398,7 +394,7 @@ class Text2SemanticDecoder(nn.Module):
                 repetition_penalty=1.35,
                 temperature=temperature,
             )[0].unsqueeze(0)
- 
+
             y = torch.concat([y, samples], dim=1)
 
             if early_stop_num != -1 and (y.shape[1] - prefix_len) > early_stop_num:
@@ -408,7 +404,7 @@ class Text2SemanticDecoder(nn.Module):
             if torch.argmax(logits, dim=-1)[0] == self.EOS or samples[0, 0] == self.EOS:
                 stop = True
             if stop:
-    
+
                 if y.shape[1] == 0:
                     y = torch.concat([y, torch.zeros_like(samples)], dim=1)
                     print("bad zero prediction")

@@ -270,10 +270,8 @@ def multi_head_attention_forward_patched(
         if cache["first_infer"] == 1:
             cache["k"][cache["stage"]] = k
             cache["v"][cache["stage"]] = v
-        else:  
-            cache["k"][cache["stage"]] = torch.cat(
-                [cache["k"][cache["stage"]], k], 0
-            ) 
+        else:
+            cache["k"][cache["stage"]] = torch.cat([cache["k"][cache["stage"]], k], 0)
             cache["v"][cache["stage"]] = torch.cat([cache["v"][cache["stage"]], v], 0)
             src_len = cache["k"][cache["stage"]].shape[0]
             k = cache["k"][cache["stage"]]

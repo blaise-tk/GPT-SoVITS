@@ -5,7 +5,7 @@ import numpy as np
 
 def load_audio(file, sr):
     try:
-        file = clean_path(file) 
+        file = clean_path(file)
         if os.path.exists(file) == False:
             raise RuntimeError(
                 "You input a wrong audio path that does not exists, please fix it!"

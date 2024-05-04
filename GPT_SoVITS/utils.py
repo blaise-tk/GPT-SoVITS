@@ -58,9 +58,7 @@ def load_checkpoint(checkpoint_path, model, optimizer=None, skip_optimizer=False
         model.module.load_state_dict(new_state_dict)
     else:
         model.load_state_dict(new_state_dict)
-    print(
-        "Loaded checkpoint '{}' (iteration {})".format(checkpoint_path, iteration)
-    )
+    print("Loaded checkpoint '{}' (iteration {})".format(checkpoint_path, iteration))
     return model, optimizer, learning_rate, iteration
 
 
@@ -361,4 +359,3 @@ class HParams:
 
     def __repr__(self):
         return self.__dict__.__repr__()
-

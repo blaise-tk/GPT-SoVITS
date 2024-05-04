@@ -40,7 +40,7 @@ if __name__ == "__main__":
         default="float16",
         choices=["float16", "float32"],
         help="fp16 or fp32",
-    ) 
+    )
     cmd = parser.parse_args()
     execute_denoise(
         input_folder=cmd.input_folder,
