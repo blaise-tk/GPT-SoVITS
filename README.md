@@ -1,4 +1,5 @@
 # GPT-SoVITS Fork
+https://colab.research.google.com/github/blaise-tk/GPT-SoVITS-Fork/blob/main/GPT-SoVITS-Fork.ipynb
 
 ## Installation
 
