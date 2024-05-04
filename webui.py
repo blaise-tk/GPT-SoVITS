@@ -15,7 +15,7 @@ import LangSegment
 import numpy as np
 import gradio as gr
 
-from AR.models.t2s_lightning_module import Text2SemanticLightningModule
+from GPT_SoVITS.AR.models.t2s_lightning_module import Text2SemanticLightningModule
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 from module.mel_processing import spectrogram_torch
 from text import cleaned_text_to_sequence

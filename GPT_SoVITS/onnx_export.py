@@ -7,7 +7,7 @@ import torch
 from torch import nn
 
 from module.models_onnx import SynthesizerTrn, symbols
-from AR.models.t2s_lightning_module_onnx import Text2SemanticLightningModule
+from GPT_SoVITS.AR.models.t2s_lightning_module_onnx import Text2SemanticLightningModule
 from text import cleaned_text_to_sequence
 
 from feature_extractor import cnhubert
