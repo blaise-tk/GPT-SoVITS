@@ -52,6 +52,3 @@ def clean_special(text, language, special_s, target_symbol):
 def text_to_sequence(text, language):
     phones = clean_text(text)
     return cleaned_text_to_sequence(phones)
-
-
-

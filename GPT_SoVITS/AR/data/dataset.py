@@ -116,8 +116,8 @@ class Text2SemanticDataset(Dataset):
         semantic_data_len = len(self.semantic_data)
         phoneme_data_len = len(self.phoneme_data.keys())
         # print("semantic_data_len:", semantic_data_len)
-        #print("phoneme_data_len:", phoneme_data_len)
-        #print(self.semantic_data)
+        # print("phoneme_data_len:", phoneme_data_len)
+        # print(self.semantic_data)
         idx = 0
         num_not_in = 0
         num_deleted_bigger = 0
@@ -138,10 +138,8 @@ class Text2SemanticDataset(Dataset):
             semantic_str = self.semantic_data.iloc[i, 1]
             # get token list
             semantic_ids = [int(idx) for idx in semantic_str.split(" ")]
-    
-            if (
-                len(semantic_ids) > self.max_sec * self.hz
-            ):  
+
+            if len(semantic_ids) > self.max_sec * self.hz:
                 num_deleted_bigger += 1
                 continue
             phoneme = phoneme.split(" ")
@@ -152,18 +150,13 @@ class Text2SemanticDataset(Dataset):
                 traceback.print_exc()
                 num_not_in += 1
                 continue
-            if (
-                len(phoneme_ids) > self.max_sec * self.hz / 2.5
-            ): 
+            if len(phoneme_ids) > self.max_sec * self.hz / 2.5:
                 num_deleted_ps += 1
                 continue
-    
 
             ps_ratio = len(phoneme_ids) / (len(semantic_ids) / self.hz)
 
-            if (
-                ps_ratio > self.max_ps_ratio or ps_ratio < self.min_ps_ratio
-            ): 
+            if ps_ratio > self.max_ps_ratio or ps_ratio < self.min_ps_ratio:
                 num_deleted_ps += 1
                 continue
 
@@ -171,7 +164,7 @@ class Text2SemanticDataset(Dataset):
             idx += 1
             self.item_names.append(item_name)
 
-        min_num = 100  
+        min_num = 100
         leng = len(self.semantic_phoneme)
         if leng < min_num:
             tmp1 = self.semantic_phoneme

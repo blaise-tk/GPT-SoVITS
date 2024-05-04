@@ -188,5 +188,3 @@ def g2p(norm_text, with_prosody=False):
     phones = [post_replace_ph(i) for i in phones]
     # todo: implement tones and word2ph
     return phones
-
-

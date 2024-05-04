@@ -26,7 +26,7 @@ from time import time as ttime
 import shutil
 
 
-def my_save(fea, path): # fix issue: torch.save doesn't support chinese path
+def my_save(fea, path):  # fix issue: torch.save doesn't support chinese path
     dir = os.path.dirname(path)
     name = os.path.basename(path)
     tmp_path = "%s.pth" % (ttime())
@@ -58,9 +58,7 @@ class my_model_ckpt(ModelCheckpoint):
                 self._every_n_epochs >= 1
                 and (trainer.current_epoch + 1) % self._every_n_epochs == 0
             ):
-                if (
-                    self.if_save_latest == True
-                ): 
+                if self.if_save_latest == True:
                     to_clean = list(os.listdir(self.dirpath))
                 self._save_topk_checkpoint(trainer, monitor_candidates)
                 if self.if_save_latest == True:

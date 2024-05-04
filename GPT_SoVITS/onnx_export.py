@@ -11,9 +11,11 @@ from AR.models.t2s_lightning_module_onnx import Text2SemanticLightningModule
 from text import cleaned_text_to_sequence
 
 from feature_extractor import cnhubert
+
 cnhubert_base_path = "pretrained_models/chinese-hubert-base"
 cnhubert.cnhubert_base_path = cnhubert_base_path
 ssl_model = cnhubert.get_model()
+
 
 def spectrogram_torch(y, n_fft, sampling_rate, hop_size, win_size, center=False):
     hann_window = torch.hann_window(win_size).to(dtype=y.dtype, device=y.device)

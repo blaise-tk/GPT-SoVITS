@@ -123,7 +123,7 @@ def execute_asr(input_folder, output_folder, model_size, language, precision):
     else:
         model_path = model_size
     if language == "auto":
-        language = None 
+        language = None
     print("Loading model:", model_size)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     try:
@@ -154,7 +154,7 @@ def execute_asr(input_folder, output_folder, model_size, language, precision):
                 if "only_asr" not in globals():
                     from tools.asr.funasr_asr import (
                         only_asr,
-                    ) 
+                    )
                 text = only_asr(file_path)
 
             if text == "":

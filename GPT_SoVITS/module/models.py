@@ -229,7 +229,7 @@ class TextEncoder(nn.Module):
         )
 
         y = self.ssl_proj(y * y_mask) * y_mask
-     
+
         y = self.encoder_ssl(y * y_mask, y_mask)
 
         text_mask = torch.unsqueeze(
@@ -895,10 +895,10 @@ class SynthesizerTrn(nn.Module):
         # if freeze_quantizer:
         #     self.ssl_proj.requires_grad_(False)
         #     self.quantizer.requires_grad_(False)
-            #self.quantizer.eval()
-            # self.enc_p.text_embedding.requires_grad_(False)
-            # self.enc_p.encoder_text.requires_grad_(False)
-            # self.enc_p.mrte.requires_grad_(False)
+        # self.quantizer.eval()
+        # self.enc_p.text_embedding.requires_grad_(False)
+        # self.enc_p.encoder_text.requires_grad_(False)
+        # self.enc_p.mrte.requires_grad_(False)
 
     def forward(self, ssl, y, y_lengths, text, text_lengths):
         y_mask = torch.unsqueeze(commons.sequence_mask(y_lengths, y.size(2)), 1).to(
@@ -907,7 +907,9 @@ class SynthesizerTrn(nn.Module):
         ge = self.ref_enc(y * y_mask, y_mask)
 
         with autocast(enabled=False):
-            maybe_no_grad = torch.no_grad() if self.freeze_quantizer else contextlib.nullcontext
+            maybe_no_grad = (
+                torch.no_grad() if self.freeze_quantizer else contextlib.nullcontext
+            )
             with maybe_no_grad:
                 if self.freeze_quantizer:
                     self.ssl_proj.eval()

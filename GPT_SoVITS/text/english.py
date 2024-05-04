@@ -323,7 +323,7 @@ class en_G2p(G2p):
                 phones.extend(["S"])
             elif phones[-1] in ["S", "Z", "SH", "ZH", "CH", "JH"]:
                 phones.extend(["AH0", "Z"])
-          
+
             else:
                 phones.extend(["Z"])
             return phones
