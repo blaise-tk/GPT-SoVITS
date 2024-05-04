@@ -1,8 +1,9 @@
 import os
+import sys
 import traceback
 import numpy as np
 
-from my_utils import load_audio
+from GPT_SoVITS.my_utils import load_audio
 from scipy.io import wavfile
 from slicer import Slicer
 
@@ -53,3 +54,6 @@ def slice(
                 )
         except:
             print(inp_path, "fail ->", traceback.format_exc())
+
+
+slice(*sys.argv[1:])

@@ -779,7 +779,7 @@ def change_label(if_label, path_list):
         yield i18n("Marking tool WebUI is disabled")
 
 
-def open_asr(asr_inp_dir, asr_opt_dir, asr_model, asr_model_size, asr_lang):
+def open_asr(asr_inp_dir, asr_opt_dir, asr_model_size, asr_model="Whisper", asr_lang="auto"):
     global p_asr
     if p_asr == None:
         asr_inp_dir = my_utils.clean_path(asr_inp_dir)
@@ -1095,7 +1095,6 @@ def open_slice(
                     n_parts,
                 )
             )
-
             p = Popen(cmd, shell=True)
             ps_slice.append(p)
         yield "In progress...", {"__type__": "update", "visible": False}, {
@@ -1662,23 +1661,24 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
                             interactive=True,
                         )
                     with gr.Row():
-                        asr_model = gr.Dropdown(
-                            label=i18n("Model"),
-                            choices=list(asr_dict.keys()),
-                            interactive=True,
-                            value="FunASR (Chinese)",
-                        )
                         asr_size = gr.Dropdown(
-                            label=i18n("Type"),
-                            choices=["large"],
+                            label=i18n("Labeling Type"),
+                            choices=[
+                                "tiny",
+                                "tiny.en",
+                                "base",
+                                "base.en",
+                                "small",
+                                "small.en",
+                                "medium",
+                                "medium.en",
+                                "large",
+                                "large-v1",
+                                "large-v2",
+                                "large-v3",
+                            ],
                             interactive=True,
-                            value="large",
-                        )
-                        asr_lang = gr.Dropdown(
-                            label=i18n("Language"),
-                            choices=["zh"],
-                            interactive=True,
-                            value="zh",
+                            value="medium",
                         )
                     with gr.Column():
                         open_asr_button = gr.Button(
@@ -1699,9 +1699,6 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
                 def change_size_choices(key):
                     return {"__type__": "update", "choices": asr_dict[key]["size"]}
 
-                asr_model.change(change_lang_choices, [asr_model], [asr_lang])
-                asr_model.change(change_size_choices, [asr_model], [asr_size])
-
             with gr.Accordion(
                 i18n("Optional: Manual text labelling reviewer"), open=False
             ):
@@ -1719,7 +1716,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
             if_label.change(change_label, [if_label, path_list], [label_info])
             open_asr_button.click(
                 open_asr,
-                [asr_inp_dir, asr_opt_dir, asr_model, asr_size, asr_lang],
+                [asr_inp_dir, asr_opt_dir, asr_size],
                 [asr_info, open_asr_button, close_asr_button],
             )
             close_asr_button.click(

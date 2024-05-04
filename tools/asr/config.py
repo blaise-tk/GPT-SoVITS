@@ -23,12 +23,12 @@ def check_fw_local_models():
 
 
 asr_dict = {
-    "FunASR (Chinese)": {
+    "FunASR": {
         "lang": ["zh"],
         "size": ["large"],
         "path": "funasr_asr.py",
     },
-    "Whisper (Global)": {
+    "Whisper": {
         "lang": ["auto", "zh", "en", "ja"],
         "size": check_fw_local_models(),
         "path": "fasterwhisper_asr.py",
