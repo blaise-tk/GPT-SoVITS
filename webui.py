@@ -17,13 +17,13 @@ import gradio as gr
 
 from GPT_SoVITS.AR.models.t2s_lightning_module import Text2SemanticLightningModule
 from transformers import AutoModelForMaskedLM, AutoTokenizer
-from module.mel_processing import spectrogram_torch
-from text import cleaned_text_to_sequence
-from module.models import SynthesizerTrn
-from feature_extractor import cnhubert
+from GPT_SoVITS.module.mel_processing import spectrogram_torch
+from GPT_SoVITS.text import cleaned_text_to_sequence
+from GPT_SoVITS.module.models import SynthesizerTrn
+from GPT_SoVITS.feature_extractor import cnhubert
 from multiprocessing import cpu_count
 from tools.asr.config import asr_dict
-from text.cleaner import clean_text
+from GPT_SoVITS.text.cleaner import clean_text
 from time import time as ttime
 
 from GPT_SoVITS import my_utils
