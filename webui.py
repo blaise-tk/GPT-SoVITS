@@ -832,7 +832,7 @@ def open_denoise(denoise_inp_dir, denoise_opt_dir):
     if p_denoise == None:
         denoise_inp_dir = my_utils.clean_path(denoise_inp_dir)
         denoise_opt_dir = my_utils.clean_path(denoise_opt_dir)
-        cmd = '"%s" tools/cmd-denoise.py -i "%s" -o "%s" -p %s' % (
+        cmd = '"%s" tools/cmd_denoise.py -i "%s" -o "%s" -p %s' % (
             python_exec,
             denoise_inp_dir,
             denoise_opt_dir,
