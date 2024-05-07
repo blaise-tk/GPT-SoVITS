@@ -1553,8 +1553,8 @@ def close1abc():
     )
 
 
-with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
-    gr.Markdown(value=i18n("GPT-SoVITS WebUI"))
+with gr.Blocks(title="GPT-SoVITS-Fork", theme="remilia/Ghostly") as app:
+    gr.Markdown(value=i18n("GPT-SoVITS-Fork"))
 
     with gr.Tabs():
         with gr.TabItem(i18n("Data Processor")):
@@ -2150,8 +2150,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI", theme="remilia/Ghostly") as app:
             )
 
     app.queue(concurrency_count=511, max_size=1022).launch(
-        inbrowser=True,
-        share=is_share,
-        server_port=webui_port_main,
-        quiet=True,
+        share="--share" in sys.argv,
+        inbrowser="--open" in sys.argv,
+        server_port=6969
     )
