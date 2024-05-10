@@ -1,8 +1,6 @@
 import os
 
-from GPT_SoVITS import utils
-hps = utils.get_hparams(stage=2)
-os.environ["CUDA_VISIBLE_DEVICES"] = hps.train.gpu_numbers.replace("-", ",")
+
 import torch
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
@@ -46,6 +44,10 @@ global_step = 0
 
 device = "cpu"  # cuda以外的设备，等mps优化后加入
 
+
+from GPT_SoVITS import utils
+hps = utils.get_hparams(stage=2)
+os.environ["CUDA_VISIBLE_DEVICES"] = hps.train.gpu_numbers.replace("-", ",")
 
 def main():
 

@@ -43,3 +43,31 @@ for file_name, url in files_to_download.items():
             print(f"Failed to download file {file_name}. Response status: {response.status_code}")
     except Exception as e:
         print(f"Error downloading file {file_name}: {str(e)}")
+
+
+base_directory = os.path.abspath('.')
+
+if os.name == 'nt':  # Windows
+    ffmpeg_url = "https://huggingface.co/blaise-tk/GPT-SoVITS-Fork/resolve/main/ffmpeg.exe"
+    ffprobe_url = "https://huggingface.co/blaise-tk/GPT-SoVITS-Fork/resolve/main/ffprobe.exe"
+else:
+    print("This script is intended for Windows OS only.")
+    exit()
+
+ffmpeg_destination_path = os.path.join(base_directory, "ffmpeg.exe")
+if not os.path.exists(ffmpeg_destination_path):
+    ffmpeg_response = requests.get(ffmpeg_url)
+    with open(ffmpeg_destination_path, 'wb') as f:
+        f.write(ffmpeg_response.content)
+    print("ffmpeg downloaded successfully.")
+else:
+    print("ffmpeg already exists.")
+
+ffprobe_destination_path = os.path.join(base_directory, "ffprobe.exe")
+if not os.path.exists(ffprobe_destination_path):
+    ffprobe_response = requests.get(ffprobe_url)
+    with open(ffprobe_destination_path, 'wb') as f:
+        f.write(ffprobe_response.content)
+    print("ffprobe downloaded successfully.")
+else:
+    print("ffprobe already exists.")

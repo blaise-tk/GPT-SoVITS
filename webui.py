@@ -33,7 +33,6 @@ from config import (
     python_exec,
     is_half,
     exp_root,
-    webui_port_main,
     webui_port_subfix,
     is_share,
 )
@@ -131,6 +130,9 @@ ngpu = torch.cuda.device_count()
 gpu_infos = []
 mem = []
 if_gpu_ok = False
+
+from GPT_SoVITS import utils
+hps = utils.get_hparams(stage=2)
 
 if torch.cuda.is_available() or ngpu != 0:
     for i in range(ngpu):
@@ -275,9 +277,6 @@ def change_sovits_weights(sovits_path):
         f.write(sovits_path)
 
 
-change_sovits_weights(sovits_path)
-
-
 def change_gpt_weights(gpt_path):
     global hz, max_sec, t2s_model, config
     hz = 50
@@ -296,7 +295,7 @@ def change_gpt_weights(gpt_path):
 
 
 change_gpt_weights(gpt_path)
-
+change_sovits_weights(sovits_path)
 
 def get_spepc(hps, filename):
     audio = my_utils.load_audio(filename, int(hps.data.sampling_rate))
@@ -779,7 +778,9 @@ def change_label(if_label, path_list):
         yield i18n("Marking tool WebUI is disabled")
 
 
-def open_asr(asr_inp_dir, asr_opt_dir, asr_model_size, asr_model="Whisper", asr_lang="auto"):
+def open_asr(
+    asr_inp_dir, asr_opt_dir, asr_model_size, asr_model="Whisper", asr_lang="auto"
+):
     global p_asr
     if p_asr == None:
         asr_inp_dir = my_utils.clean_path(asr_inp_dir)
@@ -1874,9 +1875,7 @@ with gr.Blocks(title="GPT-SoVITS-Fork", theme="remilia/Ghostly") as app:
                         )
                     with gr.Row():
                         if_save_latest = gr.Checkbox(
-                            label=i18n(
-                                "Save only the latest checkpoint"
-                            ),
+                            label=i18n("Save only the latest checkpoint"),
                             value=True,
                             interactive=True,
                             show_label=True,
@@ -1932,18 +1931,16 @@ with gr.Blocks(title="GPT-SoVITS-Fork", theme="remilia/Ghostly") as app:
                         )
                     with gr.Row():
                         if_dpo = gr.Checkbox(
-                            label=i18n(
-                                "Experimental: DPO Training"
+                            label=i18n("Experimental: DPO Training"),
+                            info=i18n(
+                                "DPO training significantly enhances the model's performance and stability, specifically in non-audio applications. It allows for processing larger text inputs without fragmentation and reduces the occurrence of errors such as word repetition or omission during inference."
                             ),
-                            info=i18n("DPO training significantly enhances the model's performance and stability, specifically in non-audio applications. It allows for processing larger text inputs without fragmentation and reduces the occurrence of errors such as word repetition or omission during inference."),
                             value=False,
                             interactive=True,
                             show_label=True,
                         )
                         if_save_latest1Bb = gr.Checkbox(
-                            label=i18n(
-                                "Save only the latest checkpoint"
-                            ),
+                            label=i18n("Save only the latest checkpoint"),
                             value=True,
                             interactive=True,
                             show_label=True,
@@ -2015,6 +2012,7 @@ with gr.Blocks(title="GPT-SoVITS-Fork", theme="remilia/Ghostly") as app:
                         value=gpt_path,
                         interactive=True,
                     )
+
                     full_sovits_path = [
                         os.path.join(SoVITS_weight_root, name) for name in SoVITS_names
                     ]
@@ -2024,14 +2022,13 @@ with gr.Blocks(title="GPT-SoVITS-Fork", theme="remilia/Ghostly") as app:
                         value=sovits_path,
                         interactive=True,
                     )
-                refresh_button = gr.Button(i18n("Refresh"), variant="primary")
-                refresh_button.click(
-                    fn=change_choices,
-                    inputs=[],
-                    outputs=[SoVITS_dropdown, GPT_dropdown],
-                )
-                SoVITS_dropdown.change(change_sovits_weights, [SoVITS_dropdown], [])
-                GPT_dropdown.change(change_gpt_weights, [GPT_dropdown], [])
+                    refresh_button = gr.Button(i18n("Refresh"), variant="primary")
+                    refresh_button.click(
+                        fn=change_choices,
+                        inputs=[],
+                        outputs=[SoVITS_dropdown, GPT_dropdown],
+                    )
+
             with gr.Accordion(i18n("Audio Reference")):
                 with gr.Row():
                     with gr.Column():
@@ -2149,8 +2146,6 @@ with gr.Blocks(title="GPT-SoVITS-Fork", theme="remilia/Ghostly") as app:
                 [output],
             )
 
-    app.queue(concurrency_count=511, max_size=1022).launch(
-        share="--share" in sys.argv,
-        inbrowser="--open" in sys.argv,
-        server_port=6969
+    app.launch(
+        share="--share" in sys.argv, inbrowser="--open" in sys.argv, server_port=6969
     )

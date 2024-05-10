@@ -192,37 +192,15 @@ def load_filepaths_and_text(filename, split="|"):
 
 
 def get_hparams(init=True, stage=1):
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-c",
-        "--config",
-        type=str,
-        default="./configs/s2.json",
-        help="JSON file for configuration",
-    )
-    parser.add_argument(
-        "-p", "--pretrain", type=str, required=False, default=None, help="pretrain dir"
-    )
-    parser.add_argument(
-        "-rs",
-        "--resume_step",
-        type=int,
-        required=False,
-        default=None,
-        help="resume step",
-    )
 
-    args = parser.parse_args()
-
-    config_path = args.config
+    config_path = "./GPT_SoVITS/configs/s2.json"
     with open(config_path, "r") as f:
         data = f.read()
     config = json.loads(data)
 
     hparams = HParams(**config)
-    hparams.pretrain = args.pretrain
-    hparams.resume_step = args.resume_step
-    # hparams.data.exp_dir = args.exp_dir
+    hparams.pretrain = None
+    hparams.resume_step = None
     if stage == 1:
         model_dir = hparams.s1_ckpt_dir
     else:
