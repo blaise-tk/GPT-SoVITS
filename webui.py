@@ -24,7 +24,6 @@ from GPT_SoVITS.feature_extractor import cnhubert
 from multiprocessing import cpu_count
 from tools.asr.config import asr_dict
 from GPT_SoVITS.text.cleaner import clean_text
-from time import time as ttime
 
 from GPT_SoVITS import my_utils
 from subprocess import Popen
@@ -456,7 +455,6 @@ def get_tts_wav(
 ):
     if prompt_text is None or len(prompt_text) == 0:
         ref_free = True
-    t0 = ttime()
     prompt_language = dict_language[prompt_language]
     text_language = dict_language[text_language]
     if not ref_free:
@@ -492,7 +490,6 @@ def get_tts_wav(
         codes = vq_model.extract_latent(ssl_content)
 
         prompt_semantic = codes[0, 0]
-    t1 = ttime()
 
     if how_to_cut == i18n("Split into four lines"):
         text = cut1(text)
@@ -530,7 +527,6 @@ def get_tts_wav(
         bert = bert.to(device).unsqueeze(0)
         all_phoneme_len = torch.tensor([all_phoneme_ids.shape[-1]]).to(device)
         prompt = prompt_semantic.unsqueeze(0).to(device)
-        t2 = ttime()
         with torch.no_grad():
             pred_semantic, idx = t2s_model.model.infer_panel(
                 all_phoneme_ids,
@@ -542,7 +538,6 @@ def get_tts_wav(
                 temperature=temperature,
                 early_stop_num=hz * max_sec,
             )
-        t3 = ttime()
         pred_semantic = pred_semantic[:, -idx:].unsqueeze(0)
         refer = get_spepc(hps, ref_wav_path)
         if is_half == True:
@@ -564,8 +559,6 @@ def get_tts_wav(
             audio /= max_audio
         audio_opt.append(audio)
         audio_opt.append(zero_wav)
-        t4 = ttime()
-    print("%.3f\t%.3f\t%.3f\t%.3f" % (t1 - t0, t2 - t1, t3 - t2, t4 - t3))
     yield hps.data.sampling_rate, (np.concatenate(audio_opt, 0) * 32768).astype(
         np.int16
     )
