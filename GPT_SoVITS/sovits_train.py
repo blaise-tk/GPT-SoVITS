@@ -1,5 +1,6 @@
-import utils, os
+import os
 
+from GPT_SoVITS import utils
 hps = utils.get_hparams(stage=2)
 os.environ["CUDA_VISIBLE_DEVICES"] = hps.train.gpu_numbers.replace("-", ",")
 import torch

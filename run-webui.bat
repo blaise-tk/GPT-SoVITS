@@ -8,7 +8,7 @@ if not exist env (
     exit /b 1
 )
 
-.env\python.exe .\tools\download_models.py
-.env\python.exe webui.py --open
+env\python.exe .\tools\download_models.py
+env\python.exe webui.py --open
 echo.
 pause
