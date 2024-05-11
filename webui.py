@@ -292,6 +292,7 @@ def change_gpt_weights(gpt_path):
 change_gpt_weights(gpt_path)
 change_sovits_weights(sovits_path)
 
+
 def get_spepc(hps, filename):
     audio = load_audio(filename, int(hps.data.sampling_rate))
     audio = torch.FloatTensor(audio)

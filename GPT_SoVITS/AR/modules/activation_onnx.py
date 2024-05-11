@@ -12,7 +12,9 @@ from torch.nn.modules.linear import NonDynamicallyQuantizableLinear
 from torch.nn.parameter import Parameter
 
 from torch.nn import functional as F
-from GPT_SoVITS.AR.modules.patched_mha_with_cache_onnx import multi_head_attention_forward_patched
+from GPT_SoVITS.AR.modules.patched_mha_with_cache_onnx import (
+    multi_head_attention_forward_patched,
+)
 
 
 class MultiheadAttention(Module):

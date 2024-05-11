@@ -80,9 +80,13 @@ for file in files_to_download:
 # Function to download FFmpeg and FFprobe for Windows
 if os.name == "nt":  # Windows
     base_directory = os.path.abspath(".")
-    ffmpeg_url = "https://huggingface.co/blaise-tk/GPT-SoVITS-Fork/resolve/main/ffmpeg.exe"
-    ffprobe_url = "https://huggingface.co/blaise-tk/GPT-SoVITS-Fork/resolve/main/ffprobe.exe"
-    
+    ffmpeg_url = (
+        "https://huggingface.co/blaise-tk/GPT-SoVITS-Fork/resolve/main/ffmpeg.exe"
+    )
+    ffprobe_url = (
+        "https://huggingface.co/blaise-tk/GPT-SoVITS-Fork/resolve/main/ffprobe.exe"
+    )
+
     def download_ff_tool(tool_url, tool_name):
         tool_destination_path = os.path.join(base_directory, tool_name)
         if not os.path.exists(tool_destination_path):
