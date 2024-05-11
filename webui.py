@@ -16,18 +16,17 @@ import numpy as np
 import gradio as gr
 
 from GPT_SoVITS.AR.models.t2s_lightning_module import Text2SemanticLightningModule
-from transformers import AutoModelForMaskedLM, AutoTokenizer
 from GPT_SoVITS.module.mel_processing import spectrogram_torch
 from GPT_SoVITS.text import cleaned_text_to_sequence
 from GPT_SoVITS.module.models import SynthesizerTrn
 from GPT_SoVITS.feature_extractor import cnhubert
+from GPT_SoVITS.text.cleaner import clean_text
+from GPT_SoVITS.my_utils import clean_path, load_audio
+
+from subprocess import Popen
 from multiprocessing import cpu_count
 from tools.asr.config import asr_dict
-from GPT_SoVITS.text.cleaner import clean_text
-
-from GPT_SoVITS import my_utils
-from subprocess import Popen
-
+from transformers import AutoModelForMaskedLM, AutoTokenizer
 from config import (
     python_exec,
     is_half,
@@ -129,9 +128,6 @@ ngpu = torch.cuda.device_count()
 gpu_infos = []
 mem = []
 if_gpu_ok = False
-
-from GPT_SoVITS import utils
-hps = utils.get_hparams(stage=2)
 
 if torch.cuda.is_available() or ngpu != 0:
     for i in range(ngpu):
@@ -297,7 +293,7 @@ change_gpt_weights(gpt_path)
 change_sovits_weights(sovits_path)
 
 def get_spepc(hps, filename):
-    audio = my_utils.load_audio(filename, int(hps.data.sampling_rate))
+    audio = load_audio(filename, int(hps.data.sampling_rate))
     audio = torch.FloatTensor(audio)
     audio_norm = audio
     audio_norm = audio_norm.unsqueeze(0)
@@ -755,7 +751,7 @@ def kill_process(pid):
 def change_label(if_label, path_list):
     global p_label
     if if_label == True and p_label == None:
-        path_list = my_utils.clean_path(path_list)
+        path_list = clean_path(path_list)
         cmd = '"%s" subfix_webui.py --load_list "%s" --webui_port %s --is_share %s' % (
             python_exec,
             path_list,
@@ -776,7 +772,7 @@ def open_asr(
 ):
     global p_asr
     if p_asr == None:
-        asr_inp_dir = my_utils.clean_path(asr_inp_dir)
+        asr_inp_dir = clean_path(asr_inp_dir)
         cmd = f'"{python_exec}" tools/asr/{asr_dict[asr_model]["path"]}'
         cmd += f' -i "{asr_inp_dir}"'
         cmd += f' -o "{asr_opt_dir}"'
@@ -824,8 +820,8 @@ def close_asr():
 def open_denoise(denoise_inp_dir, denoise_opt_dir):
     global p_denoise
     if p_denoise == None:
-        denoise_inp_dir = my_utils.clean_path(denoise_inp_dir)
-        denoise_opt_dir = my_utils.clean_path(denoise_opt_dir)
+        denoise_inp_dir = clean_path(denoise_inp_dir)
+        denoise_opt_dir = clean_path(denoise_opt_dir)
         cmd = '"%s" tools/cmd_denoise.py -i "%s" -o "%s" -p %s' % (
             python_exec,
             denoise_inp_dir,
@@ -1051,8 +1047,8 @@ def open_slice(
     n_parts,
 ):
     global ps_slice
-    inp = my_utils.clean_path(inp)
-    opt_root = my_utils.clean_path(opt_root)
+    inp = clean_path(inp)
+    opt_root = clean_path(opt_root)
     if os.path.exists(inp) == False:
         yield "Input path does not exist", {"__type__": "update", "visible": True}, {
             "__type__": "update",
@@ -1133,8 +1129,8 @@ ps1a = []
 
 def open1a(inp_text, inp_wav_dir, exp_name, gpu_numbers, bert_pretrained_dir):
     global ps1a
-    inp_text = my_utils.clean_path(inp_text)
-    inp_wav_dir = my_utils.clean_path(inp_wav_dir)
+    inp_text = clean_path(inp_text)
+    inp_wav_dir = clean_path(inp_wav_dir)
     if ps1a == []:
         opt_dir = "%s/%s" % (exp_root, exp_name)
         config = {
@@ -1211,8 +1207,8 @@ ps1b = []
 
 def open1b(inp_text, inp_wav_dir, exp_name, gpu_numbers, ssl_pretrained_dir):
     global ps1b
-    inp_text = my_utils.clean_path(inp_text)
-    inp_wav_dir = my_utils.clean_path(inp_wav_dir)
+    inp_text = clean_path(inp_text)
+    inp_wav_dir = clean_path(inp_wav_dir)
     if ps1b == []:
         config = {
             "inp_text": inp_text,
@@ -1287,7 +1283,7 @@ ps1c = []
 
 def open1c(inp_text, exp_name, gpu_numbers, pretrained_s2G_path):
     global ps1c
-    inp_text = my_utils.clean_path(inp_text)
+    inp_text = clean_path(inp_text)
     if ps1c == []:
         opt_dir = "%s/%s" % (exp_root, exp_name)
         config = {
@@ -1380,8 +1376,8 @@ def open1abc(
     pretrained_s2G_path,
 ):
     global ps1abc
-    inp_text = my_utils.clean_path(inp_text)
-    inp_wav_dir = my_utils.clean_path(inp_wav_dir)
+    inp_text = clean_path(inp_text)
+    inp_wav_dir = clean_path(inp_wav_dir)
     if ps1abc == []:
         opt_dir = "%s/%s" % (exp_root, exp_name)
         try:
