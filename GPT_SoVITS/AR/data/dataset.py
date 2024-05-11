@@ -13,7 +13,6 @@ from torch.utils.data import Dataset
 from text import cleaned_text_to_sequence
 
 
-
 def batch_sequences(sequences: List[np.array], axis: int = 0, pad_value: int = 0):
     seq = sequences[0]
     ndim = seq.ndim

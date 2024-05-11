@@ -3,6 +3,7 @@ import sys
 import traceback
 import logging
 from GPT_SoVITS import utils
+
 hps = utils.get_hparams(stage=2)
 import torch
 from module.models import SynthesizerTrn

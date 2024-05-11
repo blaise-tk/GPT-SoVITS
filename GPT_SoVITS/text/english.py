@@ -227,7 +227,7 @@ def text_normalize(text):
         char
         for char in unicodedata.normalize("NFD", text)
         if unicodedata.category(char) != "Mn"
-    )  
+    )
     text = re.sub("[^ A-Za-z'.,?!\-]", "", text)
     text = re.sub(r"(?i)i\.e\.", "that is", text)
     text = re.sub(r"(?i)e\.g\.", "for example", text)

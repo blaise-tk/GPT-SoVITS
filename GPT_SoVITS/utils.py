@@ -67,11 +67,7 @@ def my_save(fea, path):  # fix issue: torch.save doesn't support chinese path
 
 
 def save_checkpoint(model, optimizer, learning_rate, iteration, checkpoint_path):
-    print(
-        "Saved checkpoint ({}): {}".format(
-            iteration, checkpoint_path
-        )
-    )
+    print("Saved checkpoint ({}): {}".format(iteration, checkpoint_path))
     if hasattr(model, "module"):
         state_dict = model.module.state_dict()
     else:
