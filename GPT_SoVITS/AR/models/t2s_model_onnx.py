@@ -1,8 +1,4 @@
-# modified from https://github.com/yangdongchao/SoundStorm/blob/master/soundstorm/s1/AR/models/t2s_model.py
-# reference: https://github.com/lifeiteng/vall-e
 import torch
-from tqdm import tqdm
-
 from GPT_SoVITS.AR.modules.embedding_onnx import SinePositionalEmbedding
 from GPT_SoVITS.AR.modules.embedding_onnx import TokenEmbedding
 from GPT_SoVITS.AR.modules.transformer_onnx import LayerNorm

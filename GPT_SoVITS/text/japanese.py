@@ -1,7 +1,4 @@
-# modified from https://github.com/CjangCjengh/vits/blob/main/text/japanese.py
 import re
-import sys
-
 import pyopenjtalk
 
 

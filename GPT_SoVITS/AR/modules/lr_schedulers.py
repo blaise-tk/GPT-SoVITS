@@ -1,5 +1,3 @@
-# modified from https://github.com/yangdongchao/SoundStorm/blob/master/soundstorm/s1/AR/modules/lr_schedulers.py
-# reference: https://github.com/lifeiteng/vall-e
 import math
 
 import torch

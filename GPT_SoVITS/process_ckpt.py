@@ -27,6 +27,5 @@ def savee(ckpt, name, epoch, steps, hps):
         opt["config"] = hps
         opt["info"] = "%sepoch_%siteration" % (epoch, steps)
         my_save(opt, "%s/%s.pth" % (hps.save_weight_dir, name))
-        return "Success."
     except:
         return traceback.format_exc()

@@ -1,4 +1,3 @@
-# modified from https://github.com/lifeiteng/vall-e/blob/main/valle/modules/transformer.py
 import copy
 import numbers
 from functools import partial

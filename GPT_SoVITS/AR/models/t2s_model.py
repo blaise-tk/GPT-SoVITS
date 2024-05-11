@@ -1,5 +1,3 @@
-# modified from https://github.com/yangdongchao/SoundStorm/blob/master/soundstorm/s1/AR/models/t2s_model.py
-# reference: https://github.com/lifeiteng/vall-e
 import torch
 from tqdm import tqdm
 
@@ -7,8 +5,6 @@ from GPT_SoVITS.AR.models.utils import make_pad_mask
 from GPT_SoVITS.AR.models.utils import (
     topk_sampling,
     sample,
-    logits_to_probs,
-    multinomial_sample_one_no_sync,
     dpo_loss,
     make_reject_y,
     get_batch_logps,
@@ -308,10 +304,6 @@ class Text2SemanticDecoder(nn.Module):
                     y = torch.concat([y, torch.zeros_like(samples)], dim=1)
                     print("bad zero prediction")
                 break
-            # 本次生成的 semantic_ids 和之前的 y 构成新的 y
-            # print(samples.shape)#[1,1]#第一个1是bs
-            # import os
-            # os._exit(2333)
             y = torch.concat([y, samples], dim=1)
         return y
 
@@ -319,7 +311,6 @@ class Text2SemanticDecoder(nn.Module):
         targets = F.pad(y, (0, 1), value=0) + eos_id * F.pad(
             y_mask_int, (0, 1), value=1
         )
-        # 错位
         return targets[:, :-1], targets[:, 1:]
 
     def infer_panel(

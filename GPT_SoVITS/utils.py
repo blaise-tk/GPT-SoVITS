@@ -1,17 +1,17 @@
 import os
 import glob
 import sys
-import argparse
 import logging
 import json
 import subprocess
 import traceback
-
+import argparse
 import librosa
-import numpy as np
-from scipy.io.wavfile import read
 import torch
 import logging
+
+from time import time as ttime
+import shutil
 
 logging.getLogger("numba").setLevel(logging.ERROR)
 logging.getLogger("matplotlib").setLevel(logging.ERROR)
@@ -41,8 +41,6 @@ def load_checkpoint(checkpoint_path, model, optimizer=None, skip_optimizer=False
     new_state_dict = {}
     for k, v in state_dict.items():
         try:
-            # assert "quantizer" not in k
-            # print("load", k)
             new_state_dict[k] = saved_state_dict[k]
             assert saved_state_dict[k].shape == v.shape, (
                 saved_state_dict[k].shape,
@@ -50,20 +48,14 @@ def load_checkpoint(checkpoint_path, model, optimizer=None, skip_optimizer=False
             )
         except:
             traceback.print_exc()
-            print(
-                "error, %s is not in the checkpoint" % k
-            )  # shape不对也会，比如text_embedding当cleaner修改时
+            print("error, %s is not in the checkpoint" % k)
             new_state_dict[k] = v
     if hasattr(model, "module"):
         model.module.load_state_dict(new_state_dict)
     else:
         model.load_state_dict(new_state_dict)
-    print("Loaded checkpoint '{}' (iteration {})".format(checkpoint_path, iteration))
+    print("Loaded checkpoint '{}' ({}e)".format(checkpoint_path, iteration))
     return model, optimizer, learning_rate, iteration
-
-
-from time import time as ttime
-import shutil
 
 
 def my_save(fea, path):  # fix issue: torch.save doesn't support chinese path
@@ -76,7 +68,7 @@ def my_save(fea, path):  # fix issue: torch.save doesn't support chinese path
 
 def save_checkpoint(model, optimizer, learning_rate, iteration, checkpoint_path):
     print(
-        "Saving model and optimizer state at iteration {} to {}".format(
+        "Saved checkpoint ({}): {}".format(
             iteration, checkpoint_path
         )
     )
@@ -84,7 +76,6 @@ def save_checkpoint(model, optimizer, learning_rate, iteration, checkpoint_path)
         state_dict = model.module.state_dict()
     else:
         state_dict = model.state_dict()
-    # torch.save(
     my_save(
         {
             "model": state_dict,
@@ -192,15 +183,36 @@ def load_filepaths_and_text(filename, split="|"):
 
 
 def get_hparams(init=True, stage=1):
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-c",
+        "--config",
+        type=str,
+        default="./configs/s2.json",
+        help="JSON file for configuration",
+    )
+    parser.add_argument(
+        "-p", "--pretrain", type=str, required=False, default=None, help="pretrain dir"
+    )
+    parser.add_argument(
+        "-rs",
+        "--resume_step",
+        type=int,
+        required=False,
+        default=None,
+        help="resume step",
+    )
+    args = parser.parse_args()
 
-    config_path = "./GPT_SoVITS/configs/s2.json"
+    config_path = args.config
     with open(config_path, "r") as f:
         data = f.read()
     config = json.loads(data)
 
     hparams = HParams(**config)
-    hparams.pretrain = None
-    hparams.resume_step = None
+    hparams.pretrain = args.pretrain
+    hparams.resume_step = args.resume_step
+    # hparams.data.exp_dir = args.exp_dir
     if stage == 1:
         model_dir = hparams.s1_ckpt_dir
     else:
@@ -212,49 +224,6 @@ def get_hparams(init=True, stage=1):
 
     with open(config_save_path, "w") as f:
         f.write(data)
-    return hparams
-
-
-def clean_checkpoints(path_to_models="logs/44k/", n_ckpts_to_keep=2, sort_by_time=True):
-    """Freeing up space by deleting saved ckpts
-
-    Arguments:
-    path_to_models    --  Path to the model directory
-    n_ckpts_to_keep   --  Number of ckpts to keep, excluding G_0.pth and D_0.pth
-    sort_by_time      --  True -> chronologically delete ckpts
-                          False -> lexicographically delete ckpts
-    """
-    import re
-
-    ckpts_files = [
-        f
-        for f in os.listdir(path_to_models)
-        if os.path.isfile(os.path.join(path_to_models, f))
-    ]
-    name_key = lambda _f: int(re.compile("._(\d+)\.pth").match(_f).group(1))
-    time_key = lambda _f: os.path.getmtime(os.path.join(path_to_models, _f))
-    sort_key = time_key if sort_by_time else name_key
-    x_sorted = lambda _x: sorted(
-        [f for f in ckpts_files if f.startswith(_x) and not f.endswith("_0.pth")],
-        key=sort_key,
-    )
-    to_del = [
-        os.path.join(path_to_models, fn)
-        for fn in (x_sorted("G")[:-n_ckpts_to_keep] + x_sorted("D")[:-n_ckpts_to_keep])
-    ]
-    del_info = lambda fn: print(f"Free up space by deleting ckpt {fn}")
-    del_routine = lambda x: [os.remove(x), del_info(x)]
-    rs = [del_routine(fn) for fn in to_del]
-
-
-def get_hparams_from_dir(model_dir):
-    config_save_path = os.path.join(model_dir, "config.json")
-    with open(config_save_path, "r") as f:
-        data = f.read()
-    config = json.loads(data)
-
-    hparams = HParams(**config)
-    hparams.model_dir = model_dir
     return hparams
 
 

@@ -1,5 +1,3 @@
-# modified from https://github.com/yangdongchao/SoundStorm/blob/master/soundstorm/s1/AR/data/bucket_sampler.py
-# reference: https://github.com/lifeiteng/vall-e
 import itertools
 import math
 import random

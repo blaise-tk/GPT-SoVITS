@@ -43,12 +43,10 @@ maxx = 0.95
 alpha = 0.5
 if torch.cuda.is_available():
     device = "cuda:0"
-# elif torch.backends.mps.is_available():
-#     device = "mps"
+
 else:
     device = "cpu"
 model = cnhubert.get_model()
-# is_half=False
 if is_half == True:
     model = model.half().to(device)
 else:
@@ -72,9 +70,7 @@ def name2go(wav_name, wav_path):
     tmp_audio32b = (tmp_audio / tmp_max * (maxx * alpha * 1145.14)) + (
         (1 - alpha) * 1145.14
     ) * tmp_audio
-    tmp_audio = librosa.resample(
-        tmp_audio32b, orig_sr=32000, target_sr=16000
-    )  # 不是重采样问题
+    tmp_audio = librosa.resample(tmp_audio32b, orig_sr=32000, target_sr=16000)
     tensor_wav16 = torch.from_numpy(tmp_audio)
     if is_half == True:
         tensor_wav16 = tensor_wav16.half().to(device)
@@ -102,7 +98,6 @@ with open(inp_text, "r", encoding="utf8") as f:
 
 for line in lines[int(i_part) :: int(all_parts)]:
     try:
-        # wav_name,text=line.split("\t")
         wav_name, spk_name, language, text = line.split("|")
         if inp_wav_dir != "" and inp_wav_dir != None:
             wav_name = os.path.basename(wav_name)

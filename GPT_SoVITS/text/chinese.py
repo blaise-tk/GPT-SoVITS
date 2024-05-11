@@ -93,14 +93,11 @@ def _g2p(segments):
             initials.append(sub_initials)
             finals.append(sub_finals)
 
-            # assert len(sub_initials) == len(sub_finals) == len(word)
         initials = sum(initials, [])
         finals = sum(finals, [])
         #
         for c, v in zip(initials, finals):
             raw_pinyin = c + v
-            # NOTE: post process for pypinyin outputs
-            # we discriminate i, ii and iii
             if c == v:
                 assert c in punctuation
                 phone = [c]
@@ -113,7 +110,6 @@ def _g2p(segments):
                 assert tone in "12345"
 
                 if c:
-                    # 多音节
                     v_rep_map = {
                         "uei": "ui",
                         "iou": "iu",
@@ -122,7 +118,6 @@ def _g2p(segments):
                     if v_without_tone in v_rep_map.keys():
                         pinyin = c + v_rep_map[v_without_tone]
                 else:
-                    # 单音节
                     pinyin_rep_map = {
                         "ing": "ying",
                         "i": "yi",
@@ -152,7 +147,6 @@ def _g2p(segments):
 
 
 def text_normalize(text):
-    # https://github.com/PaddlePaddle/PaddleSpeech/tree/develop/paddlespeech/t2s/frontend/zh_normalization
     tx = TextNormalizer()
     sentences = tx.normalize(text)
     dest_text = ""

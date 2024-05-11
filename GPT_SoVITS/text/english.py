@@ -221,15 +221,13 @@ def text_normalize(text):
     for p, r in rep_map.items():
         text = re.sub(p, r, text)
 
-    # 来自 g2p_en 文本格式化处理
-    # 增加大写兼容
     text = unicode(text)
     text = normalize_numbers(text)
     text = "".join(
         char
         for char in unicodedata.normalize("NFD", text)
         if unicodedata.category(char) != "Mn"
-    )  # Strip accents
+    )  
     text = re.sub("[^ A-Za-z'.,?!\-]", "", text)
     text = re.sub(r"(?i)i\.e\.", "that is", text)
     text = re.sub(r"(?i)e\.g\.", "for example", text)
@@ -240,18 +238,14 @@ def text_normalize(text):
 class en_G2p(G2p):
     def __init__(self):
         super().__init__()
-        # 分词初始化
         wordsegment.load()
 
-        # 扩展过时字典, 添加姓名字典
         self.cmu = get_dict()
         self.namedict = get_namedict()
 
-        # 剔除读音错误的几个缩写
         for word in ["AE", "AI", "AR", "IOS", "HUD", "OS"]:
             del self.cmu[word.lower()]
 
-        # 修正多音字
         self.homograph2features["read"] = (["R", "IY1", "D"], ["R", "EH1", "D"], "VBP")
         self.homograph2features["complex"] = (
             ["K", "AH0", "M", "P", "L", "EH1", "K", "S"],

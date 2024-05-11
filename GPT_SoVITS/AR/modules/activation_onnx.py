@@ -1,4 +1,3 @@
-# modified from https://github.com/lifeiteng/vall-e/blob/main/valle/modules/activation.py
 from typing import Optional
 from typing import Tuple
 import torch

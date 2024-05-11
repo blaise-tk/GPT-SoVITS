@@ -31,8 +31,6 @@ if os.path.exists(semantic_path) == False:
 
     if torch.cuda.is_available():
         device = "cuda"
-    # elif torch.backends.mps.is_available():
-    #     device = "mps"
     else:
         device = "cpu"
     hps = utils.get_hparams_from_file(s2config_path)
@@ -47,8 +45,6 @@ if os.path.exists(semantic_path) == False:
     else:
         vq_model = vq_model.to(device)
     vq_model.eval()
-    # utils.load_checkpoint(utils.latest_checkpoint_path(hps.s2_ckpt_dir, "G_*.pth"), vq_model, None, True)
-    # utils.load_checkpoint(pretrained_s2G, vq_model, None, True)
     print(
         vq_model.load_state_dict(
             torch.load(pretrained_s2G, map_location="cpu")["weight"], strict=False
@@ -73,12 +69,9 @@ if os.path.exists(semantic_path) == False:
 
     lines1 = []
     for line in lines[int(i_part) :: int(all_parts)]:
-        # print(line)
         try:
-            # wav_name,text=line.split("\t")
             wav_name, spk_name, language, text = line.split("|")
             wav_name = os.path.basename(wav_name)
-            # name2go(name,lines1)
             name2go(wav_name, lines1)
         except:
             print(line, traceback.format_exc())

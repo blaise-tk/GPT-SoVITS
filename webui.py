@@ -11,6 +11,7 @@ import librosa
 import warnings
 import platform
 import traceback
+import subprocess
 import LangSegment
 import numpy as np
 import gradio as gr
@@ -97,8 +98,8 @@ if os.path.exists(tmp):
         delete = os.remove if os.path.isfile(path) else shutil.rmtree
         try:
             delete(path)
-        except Exception as e:
-            print(str(e))
+        except Exception as error:
+            print(str(error))
             pass
 
 site_packages_roots = []
@@ -267,7 +268,6 @@ def change_sovits_weights(sovits_path):
     else:
         vq_model = vq_model.to(device)
     vq_model.eval()
-    print(vq_model.load_state_dict(dict_s2["weight"], strict=False))
     with open("./logs/sweight.txt", "w", encoding="utf-8") as f:
         f.write(sovits_path)
 
@@ -284,13 +284,13 @@ def change_gpt_weights(gpt_path):
         t2s_model = t2s_model.half()
     t2s_model = t2s_model.to(device)
     t2s_model.eval()
-    total = sum([param.nelement() for param in t2s_model.parameters()])
     with open("./logs/gweight.txt", "w", encoding="utf-8") as f:
         f.write(gpt_path)
 
 
 change_gpt_weights(gpt_path)
 change_sovits_weights(sovits_path)
+
 
 def get_spepc(hps, filename):
     audio = load_audio(filename, int(hps.data.sampling_rate))
@@ -400,8 +400,6 @@ def get_phones_and_bert(text, language):
                 else:
                     langlist.append(language)
                 textlist.append(tmp["text"])
-        print(textlist)
-        print(langlist)
         phones_list = []
         bert_list = []
         norm_text_list = []
@@ -768,41 +766,52 @@ def change_label(if_label, path_list):
 
 
 def open_asr(
-    asr_inp_dir, asr_opt_dir, asr_model_size, asr_model="Whisper", asr_lang="auto"
+    asr_inp_dir,
+    asr_opt_dir,
+    asr_model_size,
+    asr_model="Whisper",
+    asr_lang="auto",
+    is_half=False,
 ):
-    global p_asr
-    if p_asr == None:
-        asr_inp_dir = clean_path(asr_inp_dir)
-        cmd = f'"{python_exec}" tools/asr/{asr_dict[asr_model]["path"]}'
-        cmd += f' -i "{asr_inp_dir}"'
-        cmd += f' -o "{asr_opt_dir}"'
-        cmd += f" -s {asr_model_size}"
-        cmd += f" -l {asr_lang}"
-        cmd += " -p %s" % ("float16" if is_half == True else "float32")
+    asr_inp_dir = clean_path(asr_inp_dir)
+    cmd = [
+        python_exec,
+        f'tools/asr/{asr_dict[asr_model]["path"]}',
+        "-i",
+        asr_inp_dir,
+        "-o",
+        asr_opt_dir,
+        "-s",
+        str(asr_model_size),
+        "-l",
+        asr_lang,
+        "-p",
+        "float16" if is_half else "float32",
+    ]
 
-        yield "In progress...", {
-            "__type__": "update",
-            "visible": False,
-        }, {
-            "__type__": "update",
-            "visible": True,
-        }
-
-        p_asr = Popen(cmd, shell=True)
-        p_asr.wait()
-        p_asr = None
-        yield f"Successfully completed!", {
-            "__type__": "update",
-            "visible": True,
-        }, {"__type__": "update", "visible": False}
-    else:
+    if p_asr is not None:
         yield "There is already a task in progress.", {
             "__type__": "update",
             "visible": False,
-        }, {
+        }, {"__type__": "update", "visible": True}
+        return
+
+    yield "In progress...", {"__type__": "update", "visible": False}, {
+        "__type__": "update",
+        "visible": True,
+    }
+
+    try:
+        subprocess.run(cmd, check=True)
+        yield "Successfully completed!", {"__type__": "update", "visible": True}, {
+            "__type__": "update",
+            "visible": False,
+        }
+    except subprocess.CalledProcessError:
+        yield "Error occurred during processing.", {
             "__type__": "update",
             "visible": True,
-        }
+        }, {"__type__": "update", "visible": False}
 
 
 def close_asr():
@@ -811,7 +820,7 @@ def close_asr():
         kill_process(p_asr.pid)
         p_asr = None
     return (
-        "已终止ASR进程",
+        "All processes have been terminated.",
         {"__type__": "update", "visible": True},
         {"__type__": "update", "visible": False},
     )

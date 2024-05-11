@@ -36,18 +36,17 @@ torch.backends.cudnn.deterministic = False
 ###反正A100fp32更快，那试试tf32吧
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
-torch.set_float32_matmul_precision(
-    "medium"
-)  # 最低精度但最快（也就快一丁点），对于结果造成不了影响
-# from config import pretrained_s2G,pretrained_s2D
+torch.set_float32_matmul_precision("medium")
 global_step = 0
 
-device = "cpu"  # cuda以外的设备，等mps优化后加入
+device = "cpu"
 
 
 from GPT_SoVITS import utils
+
 hps = utils.get_hparams(stage=2)
 os.environ["CUDA_VISIBLE_DEVICES"] = hps.train.gpu_numbers.replace("-", ",")
+
 
 def main():
 
@@ -197,8 +196,6 @@ def run(rank, n_gpus, hps):
             net_d,
             optim_d,
         )  # D mostly loaded all right
-        if rank == 0:
-            print("loaded D")
         _, _, _, epoch_str = utils.load_checkpoint(
             utils.latest_checkpoint_path("%s/logs_s2" % hps.data.exp_dir, "G_*.pth"),
             net_g,
@@ -476,20 +473,14 @@ def train_and_evaluate(
                 ckpt = net_g.module.state_dict()
             else:
                 ckpt = net_g.state_dict()
-            print(
-                "Saving checkpoint with %s_e%s %s"
-                % (
-                    hps.name,
-                    epoch,
-                    savee(
-                        ckpt,
-                        hps.name + "_e%s_s%s" % (epoch, global_step),
-                        epoch,
-                        global_step,
-                        hps,
-                    ),
-                )
-            )
+            print(f"Saved checkpoint ({epoch}e with {global_step}s)")
+            savee(
+                ckpt,
+                hps.name + "_e%s_s%s" % (epoch, global_step),
+                epoch,
+                global_step,
+                hps,
+            ),
 
     if rank == 0:
         losses = [loss_disc, loss_gen, loss_fm, loss_mel, kl_ssl, loss_kl]
@@ -500,7 +491,6 @@ def evaluate(hps, generator, eval_loader, writer_eval):
     generator.eval()
     image_dict = {}
     audio_dict = {}
-    print("Evaluating ...")
     with torch.no_grad():
         for batch_idx, (
             ssl,
@@ -571,11 +561,6 @@ def evaluate(hps, generator, eval_loader, writer_eval):
                     }
                 )
                 audio_dict.update({f"gt/audio_{batch_idx}": y[0, :, : y_lengths[0]]})
-
-        # y_hat, mask, *_ = generator.module.infer(ssl, spec_lengths, speakers, y=None)
-        # audio_dict.update({
-        #     f"gen/audio_{batch_idx}_style_pred": y_hat[0, :, :]
-        # })
 
     utils.summarize(
         writer=writer_eval,

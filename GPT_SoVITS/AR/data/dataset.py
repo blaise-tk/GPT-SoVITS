@@ -1,23 +1,17 @@
-# modified from https://github.com/yangdongchao/SoundStorm/blob/master/soundstorm/s1/AR/data/dataset.py
-# reference: https://github.com/lifeiteng/vall-e
 import pdb
 import sys
 
-# sys.path.append("/data/docker/liujing04/gpt-vits/mq-vits-s1bert_no_bert")
 import traceback, os
 from typing import Dict
 from typing import List
 
 import numpy as np
 import pandas as pd
-import torch, json
-from torch.utils.data import DataLoader
+import torch
 from torch.utils.data import Dataset
-from transformers import AutoTokenizer
 
 from text import cleaned_text_to_sequence
 
-# from config import exp_dir
 
 
 def batch_sequences(sequences: List[np.array], axis: int = 0, pad_value: int = 0):
@@ -79,13 +73,7 @@ class Text2SemanticDataset(Dataset):
                 continue
             self.phoneme_data[tmp[0]] = [tmp[1], tmp[2], tmp[3]]
 
-        # self.phoneme_data = np.load(phoneme_path, allow_pickle=True).item()
-        # pad for semantic tokens
         self.PAD: int = pad_val
-        # self.hz = 25
-        # with open("/data/docker/liujing04/gpt-vits/mq-vits-s1bert_no_bert/configs/s2.json", "r") as f:data = f.read()
-        # data=json.loads(data)["model"]["semantic_frame_rate"]#50hz
-        # self.hz=int(data[:-2])#
         self.hz = int(os.environ.get("hz", "25hz")[:-2])
 
         # max seconds of semantic token
@@ -109,29 +97,19 @@ class Text2SemanticDataset(Dataset):
             self.inited = True
             del self.semantic_data
             del self.phoneme_data
-        # self.tokenizer = AutoTokenizer.from_pretrained("hfl/chinese-roberta-wwm-ext-large")
-        # self.tokenizer = AutoTokenizer.from_pretrained("/data/docker/liujing04/bert-vits2/Bert-VITS2-master20231106/bert/chinese-roberta-wwm-ext-large")
 
     def init_batch(self):
         semantic_data_len = len(self.semantic_data)
-        phoneme_data_len = len(self.phoneme_data.keys())
-        # print("semantic_data_len:", semantic_data_len)
-        # print("phoneme_data_len:", phoneme_data_len)
-        # print(self.semantic_data)
         idx = 0
         num_not_in = 0
         num_deleted_bigger = 0
         num_deleted_ps = 0
         for i in range(semantic_data_len):
-            # 先依次遍历
-            # get str
             item_name = self.semantic_data.iloc[i, 0]
-            # print(self.phoneme_data)
             try:
                 phoneme, word2ph, text = self.phoneme_data[item_name]
             except Exception:
                 traceback.print_exc()
-                # print(f"{item_name} not in self.phoneme_data !")
                 num_not_in += 1
                 continue
 
